@@ -30,7 +30,8 @@ pipeline {
             agent {
                 docker {
                     image 'node:20'
-                    args '-u root'
+                    args '-u 1000:1000'
+                    reuseNode true
                 }
             }
             steps {
@@ -52,8 +53,6 @@ pipeline {
                     -p 80:80 \
                     -v "$WORKSPACE/dist:/usr/share/nginx/html:ro" \
                     nginx:alpine
-
-                  docker exec "$SITE_CONTAINER" ls -la /usr/share/nginx/html
                   curl -s http://127.0.0.1 | head -n 20
                 '''
             }
@@ -62,10 +61,10 @@ pipeline {
 
     post {
         success {
-            echo 'Deploy done. Site should be available on server IP (port 80).'
+            echo 'Deploy done.'
         }
         failure {
-            echo 'Pipeline failed. Check stage logs above.'
+            echo 'Pipeline failed. Check logs.'
         }
     }
 }

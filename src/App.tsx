@@ -18,7 +18,7 @@ function App() {
         <div>
           <h1>Get started</h1>
           <p>
-            Edit 2 <code>src/App.tsx</code> and save to test <code>HMR</code>
+            Edit 5 <code>src/App.tsx</code> and save to test <code>HMR</code>
           </p>
         </div>
         <button

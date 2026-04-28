@@ -4,7 +4,7 @@ pipeline {
     agent any
 
     options {
-        //skipDefaultCheckout(true)
+        skipDefaultCheckout(true)
         timestamps()
     }
 
@@ -20,7 +20,7 @@ pipeline {
                   git config --global --add safe.directory "$WORKSPACE" || true
                 '''
                 deleteDir()
-                //checkout scm
+                checkout scm
                 sh 'git rev-parse --short HEAD'
                 sh 'git log -1 --oneline'
             }

@@ -16,6 +16,8 @@ pipeline {
                 sh 'npm ci'
                 sh 'npm run build'
                 sh 'test -f dist/index.html'
+                sh 'git rev-parse --short HEAD'
+                sh 'git log -1 --oneline'
             }
         }
         stage('Deploy') {

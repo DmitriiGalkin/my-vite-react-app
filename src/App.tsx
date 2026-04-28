@@ -16,7 +16,7 @@ function App() {
           <img src={viteLogo} className="vite" alt="Vite logo" />
         </div>
         <div>
-          <h1>Get started2346</h1>
+          <h1 className="text-3xl font-bold text-blue-600">Tailwind работает</h1>
           <p>
             Edit 5 <code>src/App.tsx</code> and save to test <code>HMR</code>
           </p>

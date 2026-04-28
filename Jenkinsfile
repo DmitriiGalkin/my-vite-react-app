@@ -15,14 +15,19 @@ pipeline {
             steps {
                 sh 'npm ci'
                 sh 'npm run build'
+                sh 'test -f dist/index.html'
             }
         }
         stage('Deploy') {
             steps {
                 sh '''
+                  set -eux
                   docker rm -f my-site || true
-                  docker run -d --name my-site -p 80:80 nginx:alpine
-                  docker cp dist/. my-site:/usr/share/nginx/html
+                  docker run -d --name my-site \
+                    -p 80:80 \
+                    -v "$WORKSPACE/dist:/usr/share/nginx/html:ro" \
+                    nginx:alpine
+                  docker exec my-site ls -la /usr/share/nginx/html
                 '''
             }
         }

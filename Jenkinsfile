@@ -32,6 +32,8 @@ pipeline {
                   set -eux
                   docker run --rm \
                     -u "$(id -u):$(id -g)" \
+                    -e HOME=/tmp \
+                    -e npm_config_cache=/tmp/.npm \
                     -v "$WORKSPACE:/app" \
                     -w /app \
                     node:20 \

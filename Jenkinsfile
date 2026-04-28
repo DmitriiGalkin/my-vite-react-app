@@ -27,19 +27,15 @@ pipeline {
         }
 
         stage('Build') {
-            agent {
-                docker {
-                    image 'node:20'
-                    args '-u 1000:1000'
-                    reuseNode true
-                }
-            }
             steps {
                 sh '''
                   set -eux
-                  npm ci
-                  npm run build
-                  test -f dist/index.html
+                  docker run --rm \
+                    -u "$(id -u):$(id -g)" \
+                    -v "$WORKSPACE:/app" \
+                    -w /app \
+                    node:20 \
+                    sh -lc "npm ci && npm run build && test -f dist/index.html"
                 '''
             }
         }

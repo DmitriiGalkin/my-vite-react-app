@@ -22,5 +22,11 @@ pipeline {
                 sh 'npm run build'
             }
         }
+        stage('preview') {
+            steps {
+                echo 'preview...'
+                sh 'npm run preview'
+            }
+        }
     }
 }

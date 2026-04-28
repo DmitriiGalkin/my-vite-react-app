@@ -22,10 +22,14 @@ pipeline {
                 sh 'npm run build'
             }
         }
-        stage('preview') {
+        stage('Deploy') {
             steps {
-                echo 'preview...'
-                sh 'npm run preview'
+                echo 'Deploy static files to nginx container...'
+                sh '''
+                  docker rm -f my-site || true
+                  docker run -d --name my-site -p 80:80 nginx:alpine
+                  docker cp dist/. my-site:/usr/share/nginx/html
+                '''
             }
         }
     }

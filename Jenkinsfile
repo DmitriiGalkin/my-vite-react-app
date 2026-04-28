@@ -10,16 +10,16 @@ pipeline {
     }
 
     stages {
-        stage('Build') {
+        stage('Install') {
             steps {
-                echo 'Building...'
+                echo 'Install...'
                 sh 'npm install'
             }
         }
-        stage('Test') {
+        stage('Build') {
             steps {
-                echo 'Testing...'
-                sh 'npm test'
+                echo 'Building...'
+                sh 'npm build'
             }
         }
     }

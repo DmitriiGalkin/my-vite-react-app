@@ -62,7 +62,7 @@ pipeline {
             echo 'Deploy done.'
         }
         failure {
-            echo 'Pipeline failed. Check logs.'
+            echo 'Pipeline failed. Check logs 2.'
         }
     }
 }

@@ -5,6 +5,17 @@ pipeline {
     agent any
 
     stages {
+        stage('Checkout') {
+            steps {
+                sh '''
+                  git config --global --add safe.directory "$WORKSPACE" || true
+                '''
+                deleteDir()
+                checkout scm
+                sh 'git rev-parse --short HEAD'
+                sh 'git log -1 --oneline'
+            }
+        }
         stage('Build') {
             agent {
                 docker {

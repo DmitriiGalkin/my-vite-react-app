@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import './EditProjectPage.css'
 
 const subscribers = [
@@ -87,7 +87,7 @@ function EditProjectPage() {
                     <h2>Место</h2>
 
                     <div className="edit-project-place-actions">
-                        <button type="button">Выбрать на карте</button>
+                        <Link to="/project/1/edit/place">Выбрать на карте</Link>
                         <button type="button">Перекресток</button>
                     </div>
 

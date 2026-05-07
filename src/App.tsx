@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, Route, Routes } from 'react-router-dom'
 import ProjectPage from './ProjectPage'
 import EditProjectPage from './EditProjectPage'
+import PlaceSelectPage from './PlaceSelectPage'
 import './App.css'
 
 const projects = [
@@ -170,7 +171,8 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/project/1" element={<ProjectPage />} />
-          <Route path="/project/1/edit" element={<EditProjectPage />} />
+          <Route path="/project/1/edit" element={<EditProjectPage/>} />
+          <Route path="/project/1/edit/place" element={<PlaceSelectPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </>

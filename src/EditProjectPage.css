@@ -166,7 +166,8 @@
     gap: 10px;
 }
 
-.edit-project-place-actions button {
+.edit-project-place-actions button,
+.edit-project-place-actions a {
     min-height: 48px;
     border: 1px solid #dbe4ef;
     border-radius: 16px;

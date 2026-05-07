@@ -1,134 +1,159 @@
 import { useState } from 'react'
 import { Link, Route, Routes } from 'react-router-dom'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import ProjectPage from './ProjectPage'
+import EditProjectPage from './EditProjectPage'
 import './App.css'
 
 const projects = [
   {
     id: 1,
+    userId: 101,
+    passportId: 1001,
+    placeId: 201,
+    latitude: '55.755864',
+    longitude: '37.617698',
     title: 'Детская робототехника',
     description: 'Проект для детей, которые хотят собрать своего первого робота.',
-    image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=800&q=80',
+    image: 'https://thumbs.dreamstime.com/z/none-165853060.jpg',
+    ageFrom: 7,
+    ageTo: 12,
+    deletedA: false,
   },
   {
     id: 2,
+    userId: 102,
+    passportId: 1002,
+    placeId: 202,
+    latitude: '59.939095',
+    longitude: '30.315868',
     title: 'Творческая мастерская',
     description: 'Рисование, лепка и создание поделок в дружной команде.',
-    image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=800&q=80',
+    image: 'https://thumbs.dreamstime.com/z/none-165853060.jpg',
+    ageFrom: 5,
+    ageTo: 10,
+    deletedA: false,
   },
   {
     id: 3,
+    userId: 103,
+    passportId: 1003,
+    placeId: 203,
+    latitude: '56.838011',
+    longitude: '60.597465',
     title: 'Спортивные встречи',
     description: 'Активные занятия, игры и тренировки на свежем воздухе.',
-    image: 'https://images.unsplash.com/photo-1472162072942-cd5147eb3902?auto=format&fit=crop&w=800&q=80',
+    image: 'https://thumbs.dreamstime.com/z/none-165853060.jpg',
+    ageFrom: 8,
+    ageTo: 14,
+    deletedA: false,
   },
 ]
 
 function HomePage() {
-  const [count, setCount] = useState(0)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold text-blue-600">Tailwind работает</h1>
-          <p>
-            Edit 5 <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
+      <header className="home-header">
         <button
+          className="home-header-menu-button"
           type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+          aria-label={isMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
+          aria-expanded={isMenuOpen}
+          onClick={() => setIsMenuOpen((isMenuOpen) => !isMenuOpen)}
         >
-          Count 3 is {count}
+          {isMenuOpen ? '×' : '☰'}
         </button>
-      </section>
+
+        <div className="home-header-user">
+          <img
+              src="https://i.pravatar.cc/120?img=5"
+              alt="Настя Галкина"
+          />
+          <span>Настя Галкина</span>
+        </div>
+
+        <div className="home-header-ai-actions" aria-label="Общение с АИ">
+          <button type="button" aria-label="Чат с АИ">
+            🤖
+          </button>
+          <button type="button" aria-label="Голосовой помощник">
+            🎙️
+          </button>
+          <button type="button" aria-label="Идеи от АИ">
+            ✨
+          </button>
+        </div>
+      </header>
+
+      {isMenuOpen && (
+        <section className="home-menu">
+          <header className="home-menu-header">
+            <div className="home-menu-logo">Menu</div>
+
+            <div className="home-menu-profile">
+              <img
+                  src="https://i.pravatar.cc/120?img=5"
+                  alt="Настя Галкина"
+              />
+              <div>
+                <strong>Настя Галкина</strong>
+                <span>10 лет</span>
+              </div>
+            </div>
+          </header>
+
+          <div className="home-menu-list">
+            <button className="home-menu-item home-menu-item-primary" type="button">
+              <span className="home-menu-icon">+</span>
+              <span>Новая идея</span>
+            </button>
+
+            <Link className="home-menu-item" to="/" onClick={() => setIsMenuOpen(false)}>
+              <span className="home-menu-icon">💡</span>
+              <span>Мои проекты и идеи</span>
+            </Link>
+
+            <Link className="home-menu-item" to="/" onClick={() => setIsMenuOpen(false)}>
+              <span className="home-menu-icon">📅</span>
+              <span>Календарь</span>
+            </Link>
+          </div>
+
+          <div className="home-menu-footer">
+            <button className="home-menu-item home-menu-item-primary" type="button">
+              <span className="home-menu-icon">+</span>
+              <span>Новый проект</span>
+            </button>
+
+            <Link className="home-menu-item" to="/" onClick={() => setIsMenuOpen(false)}>
+              <span className="home-menu-icon">📁</span>
+              <span>Мои проекты</span>
+            </Link>
+          </div>
+        </section>
+      )}
 
       <section className="projects-section">
         <h2>Проекты</h2>
 
         <div className="projects-grid">
           {projects.map((project) => (
-            <article className="project-card" key={project.id}>
-              <img src={project.image} alt={project.title} />
-              <div className="project-card-content">
-                <h3>{project.title}</h3>
-                <p>{project.description}</p>
-                <Link to={`/project/${project.id}`}>Подробнее</Link>
-              </div>
-            </article>
+              <article className="project-card" key={project.id}>
+                <img src={project.image} alt={project.title} />
+                <div className="project-card-content">
+                  <h3>{project.title}</h3>
+                  <p>{project.description}</p>
+                  <Link to={`/project/${project.id}`}>Подробнее</Link>
+                </div>
+              </article>
           ))}
         </div>
       </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg className="button-icon" role="presentation" aria-hidden="true">
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg className="button-icon" role="presentation" aria-hidden="true">
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg className="button-icon" role="presentation" aria-hidden="true">
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg className="button-icon" role="presentation" aria-hidden="true">
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
     </>
   )
 }
 
-function AboutPage() {
-  return (
-      <section id="center">
-        <h1 className="text-3xl font-bold text-blue-600">About</h1>
-        <p>Это отдельная страница.</p>
-      </section>
-  )
-}
 
 function NotFoundPage() {
   return (
@@ -142,15 +167,10 @@ function NotFoundPage() {
 function App() {
   return (
       <>
-        <nav>
-          <Link to="/">Главная</Link>
-          {' | '}
-          <Link to="/project/1">Проект</Link>
-        </nav>
-
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/project/1" element={<AboutPage />} />
+          <Route path="/project/1" element={<ProjectPage />} />
+          <Route path="/project/1/edit" element={<EditProjectPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </>

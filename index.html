@@ -1,13 +1,19 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>untitled</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title><!--app-title--></title>
+
+  <meta name="description" content="<!--app-description-->" />
+
+  <meta property="og:title" content="<!--app-og-title-->" />
+  <meta property="og:description" content="<!--app-og-description-->" />
+  <meta property="og:image" content="<!--app-og-image-->" />
+  <meta property="og:type" content="<!--app-og-type-->" />
+  <meta property="og:site_name" content="<!--app-og-site-name-->" />
+</head>
+<body>
+<div id="root"><!--ssr-outlet--></div>
+<script type="module" src="/src/main.tsx"></script>
+</body>
 </html>

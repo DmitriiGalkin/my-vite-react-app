@@ -1,68 +1,81 @@
 import { useEffect, useRef, useState } from 'react'
-import L from 'leaflet'
+import type { Map as LeafletMap, Marker as LeafletMarker } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useNavigate } from 'react-router-dom'
 import './PlaceSelectPage.css'
 import { places } from './mocks'
 
-const placeIcon = L.divIcon({
-  className: 'place-osm-marker',
-  html: '<span>📍</span>',
-  iconSize: [38, 38],
-  iconAnchor: [19, 38],
-  popupAnchor: [0, -36],
-})
-
 function PlaceSelectPage() {
   const navigate = useNavigate()
   const mapRef = useRef<HTMLDivElement | null>(null)
-  const mapInstanceRef = useRef<L.Map | null>(null)
-  const markersRef = useRef<L.Marker[]>([])
+  const mapInstanceRef = useRef<LeafletMap | null>(null)
+  const markersRef = useRef<LeafletMarker[]>([])
   const [selectedPlaceId, setSelectedPlaceId] = useState(places[0].id)
 
   useEffect(() => {
-    if (!mapRef.current || mapInstanceRef.current) {
-      return
-    }
+    let isMounted = true
 
-    const map = L.map(mapRef.current, {
-      center: [55.755864, 37.617698],
-      zoom: 12,
-      zoomControl: true,
-    })
+    async function initMap() {
+      if (!mapRef.current || mapInstanceRef.current) {
+        return
+      }
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 19,
-    }).addTo(map)
+      const { default: L } = await import('leaflet')
 
-    mapInstanceRef.current = map
+      if (!isMounted || !mapRef.current) {
+        return
+      }
 
-    markersRef.current = places.map((place) => {
-      const marker = L.marker([place.latitude, place.longitude], {
-        icon: placeIcon,
-        title: place.title,
+      const placeIcon = L.divIcon({
+        className: 'place-osm-marker',
+        html: '<span>📍</span>',
+        iconSize: [38, 38],
+        iconAnchor: [19, 38],
+        popupAnchor: [0, -36],
       })
-          .addTo(map)
-          .bindPopup(`
+
+      const map = L.map(mapRef.current, {
+        center: [55.755864, 37.617698],
+        zoom: 12,
+        zoomControl: true,
+      })
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19,
+      }).addTo(map)
+
+      mapInstanceRef.current = map
+
+      markersRef.current = places.map((place) => {
+        const marker = L.marker([place.latitude, place.longitude], {
+          icon: placeIcon,
+          title: place.title,
+        })
+            .addTo(map)
+            .bindPopup(`
           <div class="place-popup">
             <strong>${place.title}</strong>
             <span>${place.address}</span>
           </div>
         `)
 
-      marker.on('click', () => {
-        setSelectedPlaceId(place.id)
-        map.setView([place.latitude, place.longitude], 14)
-      })
+        marker.on('click', () => {
+          setSelectedPlaceId(place.id)
+          map.setView([place.latitude, place.longitude], 14)
+        })
 
-      return marker
-    })
+        return marker
+      })
+    }
+
+    initMap()
 
     return () => {
+      isMounted = false
       markersRef.current.forEach((marker) => marker.remove())
       markersRef.current = []
-      map.remove()
+      mapInstanceRef.current?.remove()
       mapInstanceRef.current = null
     }
   }, [])

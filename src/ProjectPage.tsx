@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import './ProjectPage.css'
 import { meetings } from './mocks'
+import {useEffect} from "react";
 
 function ProjectPage() {
   const navigate = useNavigate()
@@ -11,6 +12,10 @@ function ProjectPage() {
     'https://randomuser.me/api/portraits/women/65.jpg',
     'https://randomuser.me/api/portraits/men/45.jpg',
   ]
+
+  useEffect(() => {
+    document.title = "Эпоксидная смола"
+  }, [])
 
   return (
     <main className="project-page">

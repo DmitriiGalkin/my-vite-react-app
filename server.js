@@ -1,0 +1,62 @@
+import fs from 'fs'
+import path from 'path'
+import express from 'express'
+import { createServer as createViteServer } from 'vite'
+
+async function createServer() {
+    const app = express()
+
+    // Создаем Vite сервер в режиме middleware
+    const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: 'custom'
+    })
+
+    app.use(vite.middlewares)
+
+    app.use(async (req, res) => {
+        const url = req.originalUrl
+
+        try {
+            // 1. Читаем index.html
+            let template = fs.readFileSync(path.resolve('index.html'), 'utf-8')
+
+            // 2. Применяем Vite HTML трансформации
+            template = await vite.transformIndexHtml(url, template)
+
+            // 3. Загружаем серверный entry
+            const { render } = await vite.ssrLoadModule('/src/entry-server.tsx')
+
+            const { html, meta } = await render(url)
+
+            const appHtml = template
+                .replace('<!--ssr-outlet-->', html)
+                .replace('<!--app-title-->', escapeHtml(meta.title))
+                .replace('<!--app-description-->', escapeHtml(meta.description))
+                .replace('<!--app-og-title-->', escapeHtml(meta.ogTitle))
+                .replace('<!--app-og-description-->', escapeHtml(meta.ogDescription))
+                .replace('<!--app-og-image-->', escapeHtml(meta.ogImage))
+                .replace('<!--app-og-type-->', escapeHtml(meta.ogType))
+                .replace('<!--app-og-site-name-->', escapeHtml(meta.ogSiteName))
+            res.status(200).set({ 'Content-Type': 'text/html' }).end(appHtml)
+        } catch (e) {
+            vite.ssrFixStacktrace(e)
+            console.error(e)
+            res.status(500).end(e instanceof Error ? e.message : String(e))
+        }
+    })
+
+    app.listen(3000, () => console.log('Server running on http://localhost:3000'));
+}
+
+createServer()
+
+
+function escapeHtml(value) {
+    return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;')
+}

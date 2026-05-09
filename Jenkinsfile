@@ -48,11 +48,9 @@ pipeline {
                   set -eux
                   docker rm -f "$SITE_CONTAINER" || true
                   docker run -d --name "$SITE_CONTAINER" \
-                    -p 80:3000 \
-                    -v "$WORKSPACE:/app:ro" \
-                    -w /app \
-                    node:20 \
-                    sh -lc "npm install -g pm2 && pm2 start server.js --no-daemon"
+                    -p 80:80 \
+                    -v "$WORKSPACE/dist:/usr/share/nginx/html:ro" \
+                    nginx:alpine
                   curl -s http://127.0.0.1 | head -n 20
                 '''
             }

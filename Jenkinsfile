@@ -11,6 +11,7 @@ pipeline {
     environment {
         APP_NAME = 'quantum-application'
         PORT = '3000'
+        NODE_VERSION = '20'
     }
 
     stages {
@@ -31,8 +32,16 @@ pipeline {
             steps {
                 sh '''
                   set -eux
+
+                  export NVM_DIR="$HOME/.nvm"
+                  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+                  nvm install "$NODE_VERSION"
+                  nvm use "$NODE_VERSION"
+
                   node -v
                   npm -v
+
                   npm ci
                 '''
             }
@@ -42,6 +51,15 @@ pipeline {
             steps {
                 sh '''
                   set -eux
+
+                  export NVM_DIR="$HOME/.nvm"
+                  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+                  nvm use "$NODE_VERSION"
+
+                  node -v
+                  npm -v
+
                   npm run build
                   test -f dist/index.html
                 '''
@@ -52,9 +70,16 @@ pipeline {
             steps {
                 sh '''
                   set -eux
+
+                  export NVM_DIR="$HOME/.nvm"
+                  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+                  nvm use "$NODE_VERSION"
+
                   if ! command -v pm2 >/dev/null 2>&1; then
                     npm install -g pm2
                   fi
+
                   pm2 -v
                 '''
             }
@@ -64,6 +89,11 @@ pipeline {
             steps {
                 sh '''
                   set -eux
+
+                  export NVM_DIR="$HOME/.nvm"
+                  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+                  nvm use "$NODE_VERSION"
 
                   pm2 delete "$APP_NAME" || true
 
@@ -89,6 +119,10 @@ pipeline {
         failure {
             echo 'Pipeline failed. Check logs.'
             sh '''
+              export NVM_DIR="$HOME/.nvm"
+              [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+              nvm use "$NODE_VERSION" || true
               pm2 logs "$APP_NAME" --lines 100 --nostream || true
             '''
         }

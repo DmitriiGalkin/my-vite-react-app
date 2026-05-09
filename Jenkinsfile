@@ -9,7 +9,8 @@ pipeline {
     }
 
     environment {
-        SITE_CONTAINER = 'my-site'
+        APP_NAME = 'quantum-application'
+        PORT = '3000'
     }
 
     stages {
@@ -26,18 +27,35 @@ pipeline {
             }
         }
 
+        stage('Install dependencies') {
+            steps {
+                sh '''
+                  set -eux
+                  node -v
+                  npm -v
+                  npm ci
+                '''
+            }
+        }
+
         stage('Build') {
             steps {
                 sh '''
                   set -eux
-                  docker run --rm \
-                    -u "$(id -u):$(id -g)" \
-                    -e HOME=/tmp \
-                    -e npm_config_cache=/tmp/.npm \
-                    -v "$WORKSPACE:/app" \
-                    -w /app \
-                    node:20 \
-                    sh -lc "npm ci && npm run build && test -f dist/index.html"
+                  npm run build
+                  test -f dist/index.html
+                '''
+            }
+        }
+
+        stage('Install PM2') {
+            steps {
+                sh '''
+                  set -eux
+                  if ! command -v pm2 >/dev/null 2>&1; then
+                    npm install -g pm2
+                  fi
+                  pm2 -v
                 '''
             }
         }
@@ -46,14 +64,19 @@ pipeline {
             steps {
                 sh '''
                   set -eux
-                  docker rm -f "$SITE_CONTAINER" || true
-                  docker run -d --name "$SITE_CONTAINER" \
-                    -p 80:3000 \
-                    -v "$WORKSPACE:/app:ro" \
-                    -w /app \
-                    node:20 \
-                    sh -lc "npm install -g pm2 && pm2 start server.js --no-daemon"
-                  curl -s http://127.0.0.1 | head -n 20
+
+                  pm2 delete "$APP_NAME" || true
+
+                  PORT="$PORT" pm2 start server.js \
+                    --name "$APP_NAME" \
+                    --time
+
+                  pm2 save
+
+                  sleep 3
+
+                  pm2 status
+                  curl -sSf "http://127.0.0.1:$PORT" | head -n 20
                 '''
             }
         }
@@ -64,7 +87,10 @@ pipeline {
             echo 'Deploy done.'
         }
         failure {
-            echo 'Pipeline failed. Check logs 2.'
+            echo 'Pipeline failed. Check logs.'
+            sh '''
+              pm2 logs "$APP_NAME" --lines 100 --nostream || true
+            '''
         }
     }
 }

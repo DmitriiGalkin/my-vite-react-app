@@ -86,7 +86,7 @@ pipeline {
         }
 
         failure {
-            echo 'Pipeline failed. Container logs:'
+            echo 'Pipeline failed. Container log2s:'
 
             sh '''
               docker logs "$CONTAINER_NAME" --tail 200 || true

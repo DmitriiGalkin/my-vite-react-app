@@ -10,88 +10,45 @@ pipeline {
 
     environment {
         APP_NAME = 'quantum-application'
-        PORT = '80'
-        NODE_VERSION = '20'
+        CONTAINER_NAME = 'quantum-application'
+        NODE_IMAGE = 'node:latest'
+        APP_PORT = '3000'
+        HOST_PORT = '80'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                sh '''
-                  set -ex
-                  git config --global --add safe.directory "$WORKSPACE" || true
-                '''
                 deleteDir()
                 checkout scm
-                sh 'git rev-parse --short HEAD'
-                sh 'git log -1 --oneline'
-            }
-        }
 
-        stage('Install dependencies') {
-            steps {
                 sh '''
-                  bash -lc '
-                    set -ex
-
-                    export NVM_DIR="$HOME/.nvm"
-                    if [ -s "$NVM_DIR/nvm.sh" ]; then
-                      . "$NVM_DIR/nvm.sh"
-                    else
-                      echo "nvm not found at $NVM_DIR/nvm.sh"
-                      exit 1
-                    fi
-
-                    nvm install "$NODE_VERSION"
-                    nvm use "$NODE_VERSION"
-
-                    node -v
-                    npm -v
-
-                    npm ci
-                  '
+                  set -eux
+                  git rev-parse --short HEAD
+                  git log -1 --oneline
                 '''
             }
         }
 
-        stage('Build') {
+        stage('Pull Node image') {
             steps {
                 sh '''
-                  bash -lc '
-                    set -ex
-
-                    export NVM_DIR="$HOME/.nvm"
-                    . "$NVM_DIR/nvm.sh"
-
-                    nvm use "$NODE_VERSION"
-
-                    node -v
-                    npm -v
-
-                    npm run build
-                    test -f dist/index.html
-                  '
+                  set -eux
+                  docker pull "$NODE_IMAGE"
                 '''
             }
         }
 
-        stage('Install PM2') {
+        stage('Install dependencies and build') {
             steps {
                 sh '''
-                  bash -lc '
-                    set -ex
+                  set -eux
 
-                    export NVM_DIR="$HOME/.nvm"
-                    . "$NVM_DIR/nvm.sh"
-
-                    nvm use "$NODE_VERSION"
-
-                    if ! command -v pm2 >/dev/null 2>&1; then
-                      npm install -g pm2
-                    fi
-
-                    pm2 -v
-                  '
+                  docker run --rm \
+                    -v "$WORKSPACE:/app" \
+                    -w /app \
+                    "$NODE_IMAGE" \
+                    sh -lc "npm ci && npm run build && test -f dist/index.html"
                 '''
             }
         }
@@ -99,27 +56,25 @@ pipeline {
         stage('Deploy') {
             steps {
                 sh '''
-                  bash -lc '
-                    set -ex
+                  set -eux
 
-                    export NVM_DIR="$HOME/.nvm"
-                    . "$NVM_DIR/nvm.sh"
+                  docker rm -f "$CONTAINER_NAME" || true
 
-                    nvm use "$NODE_VERSION"
+                  docker run -d \
+                    --name "$CONTAINER_NAME" \
+                    --restart unless-stopped \
+                    -p "$HOST_PORT:$APP_PORT" \
+                    -v "$WORKSPACE:/app" \
+                    -w /app \
+                    "$NODE_IMAGE" \
+                    sh -lc "npm install -g pm2 && pm2 start server.js --name $APP_NAME --no-daemon"
 
-                    pm2 delete "$APP_NAME" || true
+                  sleep 5
 
-                    PORT="$PORT" pm2 start server.js \
-                      --name "$APP_NAME" \
-                      --time
+                  docker ps --filter "name=$CONTAINER_NAME"
+                  docker logs "$CONTAINER_NAME" --tail 100
 
-                    pm2 save
-
-                    sleep 3
-
-                    pm2 status
-                    curl -sSf "http://127.0.0.1:$PORT" | head -n 20
-                  '
+                  curl -sSf "http://127.0.0.1:$HOST_PORT" | head -n 20
                 '''
             }
         }
@@ -131,19 +86,10 @@ pipeline {
         }
 
         failure {
-            echo 'Pipeline failed. Check logs.'
+            echo 'Pipeline failed. Container logs:'
 
             sh '''
-              bash -lc '
-                export NVM_DIR="$HOME/.nvm"
-
-                if [ -s "$NVM_DIR/nvm.sh" ]; then
-                  . "$NVM_DIR/nvm.sh"
-                  nvm use "$NODE_VERSION" || true
-                fi
-
-                pm2 logs "$APP_NAME" --lines 100 --nostream || true
-              '
+              docker logs "$CONTAINER_NAME" --tail 200 || true
             '''
         }
     }

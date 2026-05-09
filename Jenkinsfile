@@ -10,7 +10,7 @@ pipeline {
 
     environment {
         APP_NAME = 'quantum-application'
-        PORT = '3000'
+        PORT = '80'
         NODE_VERSION = '20'
     }
 

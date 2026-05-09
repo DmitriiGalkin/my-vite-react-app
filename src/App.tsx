@@ -4,51 +4,7 @@ import ProjectPage from './ProjectPage'
 import EditProjectPage from './EditProjectPage'
 import PlaceSelectPage from './PlaceSelectPage'
 import './App.css'
-
-const projects = [
-  {
-    id: 1,
-    userId: 101,
-    passportId: 1001,
-    placeId: 201,
-    latitude: '55.755864',
-    longitude: '37.617698',
-    title: 'Детская робототехника',
-    description: 'Проект для детей, которые хотят собрать своего первого робота.',
-    image: 'https://thumbs.dreamstime.com/z/none-165853060.jpg',
-    ageFrom: 7,
-    ageTo: 12,
-    deletedA: false,
-  },
-  {
-    id: 2,
-    userId: 102,
-    passportId: 1002,
-    placeId: 202,
-    latitude: '59.939095',
-    longitude: '30.315868',
-    title: 'Творческая мастерская',
-    description: 'Рисование, лепка и создание поделок в дружной команде.',
-    image: 'https://thumbs.dreamstime.com/z/none-165853060.jpg',
-    ageFrom: 5,
-    ageTo: 10,
-    deletedA: false,
-  },
-  {
-    id: 3,
-    userId: 103,
-    passportId: 1003,
-    placeId: 203,
-    latitude: '56.838011',
-    longitude: '60.597465',
-    title: 'Спортивные встречи',
-    description: 'Активные занятия, игры и тренировки на свежем воздухе.',
-    image: 'https://thumbs.dreamstime.com/z/none-165853060.jpg',
-    ageFrom: 8,
-    ageTo: 14,
-    deletedA: false,
-  },
-]
+import { projects } from './mocks'
 
 function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -141,9 +97,9 @@ function HomePage() {
         <div className="projects-grid">
           {projects.map((project) => (
               <article className="project-card" key={project.id}>
-                <img src={project.image} alt={project.title} />
+                <img src={project.image || ''} alt={project.title || ''} />
                 <div className="project-card-content">
-                  <h3>{project.title}</h3>
+                  <h3>{project.title} 2</h3>
                   <p>{project.description}</p>
                   <Link to={`/project/${project.id}`}>Подробнее</Link>
                 </div>

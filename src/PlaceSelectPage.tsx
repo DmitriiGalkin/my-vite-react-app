@@ -1,115 +1,152 @@
+import { useEffect, useRef, useState } from 'react'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 import { useNavigate } from 'react-router-dom'
 import './PlaceSelectPage.css'
+import { places } from './mocks'
 
-const places = [
-  {
-    id: 1,
-    title: 'Лесной дом',
-    description: 'Творческое пространство рядом с парком',
-    address: 'Москва, Лесная улица, 12',
-    price: '1000 ₽/час',
-    position: {
-      top: '34%',
-      left: '46%',
-    },
-  },
-  {
-    id: 2,
-    title: 'Перекресток',
-    description: 'Зал для встреч и мастер-классов',
-    address: 'Москва, Тверская улица, 8',
-    price: '1500 ₽/час',
-    position: {
-      top: '48%',
-      left: '58%',
-    },
-  },
-  {
-    id: 3,
-    title: 'Светлая студия',
-    description: 'Небольшой зал с окнами и столами',
-    address: 'Москва, Арбат, 20',
-    price: '1200 ₽/час',
-    position: {
-      top: '56%',
-      left: '38%',
-    },
-  },
-  {
-    id: 4,
-    title: 'Дом творчества',
-    description: 'Подходит для детских занятий',
-    address: 'Москва, Покровка, 15',
-    price: '900 ₽/час',
-    position: {
-      top: '42%',
-      left: '72%',
-    },
-  },
-]
+const placeIcon = L.divIcon({
+  className: 'place-osm-marker',
+  html: '<span>📍</span>',
+  iconSize: [38, 38],
+  iconAnchor: [19, 38],
+  popupAnchor: [0, -36],
+})
 
 function PlaceSelectPage() {
   const navigate = useNavigate()
+  const mapRef = useRef<HTMLDivElement | null>(null)
+  const mapInstanceRef = useRef<L.Map | null>(null)
+  const markersRef = useRef<L.Marker[]>([])
+  const [selectedPlaceId, setSelectedPlaceId] = useState(places[0].id)
+
+  useEffect(() => {
+    if (!mapRef.current || mapInstanceRef.current) {
+      return
+    }
+
+    const map = L.map(mapRef.current, {
+      center: [55.755864, 37.617698],
+      zoom: 12,
+      zoomControl: true,
+    })
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map)
+
+    mapInstanceRef.current = map
+
+    markersRef.current = places.map((place) => {
+      const marker = L.marker([place.latitude, place.longitude], {
+        icon: placeIcon,
+        title: place.title,
+      })
+          .addTo(map)
+          .bindPopup(`
+          <div class="place-popup">
+            <strong>${place.title}</strong>
+            <span>${place.address}</span>
+          </div>
+        `)
+
+      marker.on('click', () => {
+        setSelectedPlaceId(place.id)
+        map.setView([place.latitude, place.longitude], 14)
+      })
+
+      return marker
+    })
+
+    return () => {
+      markersRef.current.forEach((marker) => marker.remove())
+      markersRef.current = []
+      map.remove()
+      mapInstanceRef.current = null
+    }
+  }, [])
+
+  const selectedPlace = places.find((place) => place.id === selectedPlaceId) || places[0]
+
+  const handlePlaceClick = (placeId: number) => {
+    const place = places.find((place) => place.id === placeId)
+
+    if (!place) {
+      return
+    }
+
+    setSelectedPlaceId(place.id)
+
+    mapInstanceRef.current?.setView([place.latitude, place.longitude], 14)
+
+    const marker = markersRef.current.find((marker) => {
+      const position = marker.getLatLng()
+
+      return position.lat === place.latitude && position.lng === place.longitude
+    })
+
+    marker?.openPopup()
+  }
 
   return (
-    <main className="place-select-page">
-      <header className="place-select-header">
-        <button type="button" onClick={() => navigate(-1)} aria-label="Назад">
-          ←
-        </button>
-        <div>
-          <h1>Выбор места</h1>
-          <p>Выберите площадку для проведения проекта</p>
-        </div>
-      </header>
+      <main className="place-select-page">
+        <header className="place-select-header">
+          <button type="button" onClick={() => navigate(-1)} aria-label="Назад">
+            ←
+          </button>
+          <div>
+            <h1>Выбор места</h1>
+            <p>Выберите площадку для проведения проекта</p>
+          </div>
+        </header>
 
-      <section className="place-map-card">
-        <iframe
-          className="place-map"
-          title="Карта мест проведения проектов"
-          src="https://www.google.com/maps?q=Moscow&z=12&output=embed"
-          loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
-        />
+        <section className="place-map-card">
+          <div className="place-map" ref={mapRef} />
+        </section>
 
-        <div className="place-map-markers" aria-label="Места проведения проектов">
+        <section className="place-selected-card">
+          <div>
+            <span>Выбранное место</span>
+            <h2>{selectedPlace.title}</h2>
+            <p>{selectedPlace.address}</p>
+          </div>
+          <button type="button" onClick={() => navigate('/project/1/edit')}>
+            Выбрать
+          </button>
+        </section>
+
+        <section className="place-list">
+          <h2>Доступные места</h2>
+
           {places.map((place) => (
-            <button
-              className="place-map-marker"
-              style={place.position}
-              type="button"
-              key={place.id}
-              aria-label={place.title}
-            >
-              📍
-            </button>
+              <article
+                  className={`place-card ${selectedPlaceId === place.id ? 'place-card-selected' : ''}`}
+                  key={place.id}
+              >
+                <button
+                    className="place-card-main"
+                    type="button"
+                    onClick={() => handlePlaceClick(place.id)}
+                >
+                  <span className="place-card-icon">📍</span>
+
+                  <span className="place-card-content">
+                <strong>{place.title}</strong>
+                <small>{place.description}</small>
+                <em>{place.address}</em>
+              </span>
+                </button>
+
+                <div className="place-card-action">
+                  <button type="button" onClick={() => navigate('/project/1/edit')}>
+                    Выбрать
+                  </button>
+                </div>
+              </article>
           ))}
-        </div>
-      </section>
-
-      <section className="place-list">
-        <h2>Доступные места</h2>
-
-        {places.map((place) => (
-          <article className="place-card" key={place.id}>
-            <div className="place-card-icon">📍</div>
-
-            <div className="place-card-content">
-              <h3>{place.title}</h3>
-              <p>{place.description}</p>
-              <span>{place.address}</span>
-            </div>
-
-            <div className="place-card-action">
-              <strong>{place.price}</strong>
-              <button type="button" onClick={() => navigate('/project/1/edit')}>
-                Выбрать
-              </button>
-            </div>
-          </article>
-        ))}
-      </section>
-    </main>
+        </section>
+      </main>
   )
 }
 

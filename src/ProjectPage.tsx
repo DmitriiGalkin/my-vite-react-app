@@ -1,35 +1,15 @@
 import { Link, useNavigate } from 'react-router-dom'
 import './ProjectPage.css'
+import { meetings } from './mocks'
 
 function ProjectPage() {
   const navigate = useNavigate()
 
-  const participants = [
-    'https://i.pravatar.cc/80?img=1',
-    'https://i.pravatar.cc/80?img=2',
-    'https://i.pravatar.cc/80?img=3',
-    'https://i.pravatar.cc/80?img=4',
-  ]
-
-  const schedule = [
-    {
-      id: 1,
-      date: '17 ноября',
-      time: '15:00',
-      places: 45,
-    },
-    {
-      id: 2,
-      date: '17 ноября',
-      time: '15:00',
-      places: 45,
-    },
-    {
-      id: 3,
-      date: '17 ноября',
-      time: '15:00',
-      places: 45,
-    },
+  const userImages = [
+    'https://randomuser.me/api/portraits/women/12.jpg',
+    'https://randomuser.me/api/portraits/men/32.jpg',
+    'https://randomuser.me/api/portraits/women/65.jpg',
+    'https://randomuser.me/api/portraits/men/45.jpg',
   ]
 
   return (
@@ -58,7 +38,7 @@ function ProjectPage() {
 
         <div className="participants">
           <div className="participants-avatars">
-            {participants.map((participant) => (
+            {userImages.map((participant) => (
               <img src={participant} alt="Участник" key={participant} />
             ))}
             <span className="participants-more">+5</span>
@@ -84,23 +64,39 @@ function ProjectPage() {
           <h2>Расписание</h2>
 
           <div className="schedule-list">
-            {schedule.map((slot) => (
-              <article className="schedule-card" key={slot.id}>
-                <div>
-                  <span className="schedule-label">Дата</span>
-                  <strong>{slot.date}</strong>
-                </div>
-                <div>
-                  <span className="schedule-label">Время</span>
-                  <strong>{slot.time}</strong>
-                </div>
-                <div>
-                  <span className="schedule-label">Мест</span>
-                  <strong>{slot.places}</strong>
-                </div>
-                <button type="button">Участвовать</button>
-              </article>
-            ))}
+            {meetings
+                .filter((meeting) => !meeting.deletedAt)
+                .map((meeting) => {
+                  const startedAt = new Date(meeting.startedAt)
+
+                  return (
+                      <article className="schedule-card" key={meeting.id}>
+                        <div>
+                          <span className="schedule-label">Дата</span>
+                          <strong>
+                            {startedAt.toLocaleDateString('ru-RU', {
+                              day: 'numeric',
+                              month: 'long',
+                            })}
+                          </strong>
+                        </div>
+                        <div>
+                          <span className="schedule-label">Время</span>
+                          <strong>
+                            {startedAt.toLocaleTimeString('ru-RU', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </strong>
+                        </div>
+                        <div>
+                          <span className="schedule-label">Цена</span>
+                          <strong>{meeting.price ? `${meeting.price} ₽` : 'Бесплатно'}</strong>
+                        </div>
+                        <button type="button">Участвовать</button>
+                      </article>
+                  )
+                })}
           </div>
         </section>
       </section>

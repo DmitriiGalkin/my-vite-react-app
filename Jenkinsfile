@@ -18,7 +18,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 sh '''
-                  set -eux
+                  set -ex
                   git config --global --add safe.directory "$WORKSPACE" || true
                 '''
                 deleteDir()
@@ -31,18 +31,25 @@ pipeline {
         stage('Install dependencies') {
             steps {
                 sh '''
-                  set -eux
+                  bash -lc '
+                    set -ex
 
-                  export NVM_DIR="$HOME/.nvm"
-                  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+                    export NVM_DIR="$HOME/.nvm"
+                    if [ -s "$NVM_DIR/nvm.sh" ]; then
+                      . "$NVM_DIR/nvm.sh"
+                    else
+                      echo "nvm not found at $NVM_DIR/nvm.sh"
+                      exit 1
+                    fi
 
-                  nvm install "$NODE_VERSION"
-                  nvm use "$NODE_VERSION"
+                    nvm install "$NODE_VERSION"
+                    nvm use "$NODE_VERSION"
 
-                  node -v
-                  npm -v
+                    node -v
+                    npm -v
 
-                  npm ci
+                    npm ci
+                  '
                 '''
             }
         }
@@ -50,18 +57,20 @@ pipeline {
         stage('Build') {
             steps {
                 sh '''
-                  set -eux
+                  bash -lc '
+                    set -ex
 
-                  export NVM_DIR="$HOME/.nvm"
-                  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+                    export NVM_DIR="$HOME/.nvm"
+                    . "$NVM_DIR/nvm.sh"
 
-                  nvm use "$NODE_VERSION"
+                    nvm use "$NODE_VERSION"
 
-                  node -v
-                  npm -v
+                    node -v
+                    npm -v
 
-                  npm run build
-                  test -f dist/index.html
+                    npm run build
+                    test -f dist/index.html
+                  '
                 '''
             }
         }
@@ -69,18 +78,20 @@ pipeline {
         stage('Install PM2') {
             steps {
                 sh '''
-                  set -eux
+                  bash -lc '
+                    set -ex
 
-                  export NVM_DIR="$HOME/.nvm"
-                  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+                    export NVM_DIR="$HOME/.nvm"
+                    . "$NVM_DIR/nvm.sh"
 
-                  nvm use "$NODE_VERSION"
+                    nvm use "$NODE_VERSION"
 
-                  if ! command -v pm2 >/dev/null 2>&1; then
-                    npm install -g pm2
-                  fi
+                    if ! command -v pm2 >/dev/null 2>&1; then
+                      npm install -g pm2
+                    fi
 
-                  pm2 -v
+                    pm2 -v
+                  '
                 '''
             }
         }
@@ -88,25 +99,27 @@ pipeline {
         stage('Deploy') {
             steps {
                 sh '''
-                  set -eux
+                  bash -lc '
+                    set -ex
 
-                  export NVM_DIR="$HOME/.nvm"
-                  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+                    export NVM_DIR="$HOME/.nvm"
+                    . "$NVM_DIR/nvm.sh"
 
-                  nvm use "$NODE_VERSION"
+                    nvm use "$NODE_VERSION"
 
-                  pm2 delete "$APP_NAME" || true
+                    pm2 delete "$APP_NAME" || true
 
-                  PORT="$PORT" pm2 start server.js \
-                    --name "$APP_NAME" \
-                    --time
+                    PORT="$PORT" pm2 start server.js \
+                      --name "$APP_NAME" \
+                      --time
 
-                  pm2 save
+                    pm2 save
 
-                  sleep 3
+                    sleep 3
 
-                  pm2 status
-                  curl -sSf "http://127.0.0.1:$PORT" | head -n 20
+                    pm2 status
+                    curl -sSf "http://127.0.0.1:$PORT" | head -n 20
+                  '
                 '''
             }
         }
@@ -116,14 +129,21 @@ pipeline {
         success {
             echo 'Deploy done.'
         }
+
         failure {
             echo 'Pipeline failed. Check logs.'
-            sh '''
-              export NVM_DIR="$HOME/.nvm"
-              [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
-              nvm use "$NODE_VERSION" || true
-              pm2 logs "$APP_NAME" --lines 100 --nostream || true
+            sh '''
+              bash -lc '
+                export NVM_DIR="$HOME/.nvm"
+
+                if [ -s "$NVM_DIR/nvm.sh" ]; then
+                  . "$NVM_DIR/nvm.sh"
+                  nvm use "$NODE_VERSION" || true
+                fi
+
+                pm2 logs "$APP_NAME" --lines 100 --nostream || true
+              '
             '''
         }
     }

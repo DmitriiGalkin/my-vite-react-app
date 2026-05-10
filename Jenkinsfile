@@ -40,14 +40,21 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                checkout scm
+                                checkout scm
 
-                sh '''
-                  set -eux
-                  git rev-parse --short HEAD
-                  git log -1 --oneline
-                '''
-            }
+                                withCredentials([file(credentialsId: 'quantum-env-file', variable: 'ENV_FILE')]) {
+                                    sh '''
+                                      cp "$ENV_FILE" "$WORKSPACE/.env"
+                                      chmod 600 "$WORKSPACE/.env"
+                                    '''
+                                }
+
+                                sh '''
+                                  set -eux
+                                  git rev-parse --short HEAD
+                                  git log -1 --oneline
+                                '''
+                            }
         }
 
         stage('Pull Node image') {
@@ -87,6 +94,8 @@ pipeline {
                       --name "$CONTAINER_NAME" \
                       --restart unless-stopped \
                       -p "$HOST_PORT:$APP_PORT" \
+                      -p "4000:4000" \
+                      --env-file "$WORKSPACE/.env" \
                       -e HOME=/tmp \
                       -e npm_config_cache=/tmp/.npm \
                       -v "$WORKSPACE:/workspace" \

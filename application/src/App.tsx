@@ -4,10 +4,30 @@ import ProjectPage from './ProjectPage'
 import EditProjectPage from './EditProjectPage'
 import PlaceSelectPage from './PlaceSelectPage'
 import './App.css'
-import { projects } from './mocks'
+import type { Project } from './types'
+import { useQuery } from '@tanstack/react-query'
+
+async function fetchProjects(): Promise<Project[]> {
+    const response = await fetch('http://localhost:4000/projects')
+
+    if (!response.ok) {
+        throw new Error('Не удалось загрузить проекты')
+    }
+
+    return response.json()
+}
 
 function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+
+    const {
+        data: projects = [],
+        isLoading: isProjectsLoading,
+        isError: isProjectsError,
+    } = useQuery({
+        queryKey: ['projects'],
+        queryFn: fetchProjects,
+    })
 
   return (
     <>
@@ -94,7 +114,11 @@ function HomePage() {
       <section className="projects-section">
         <h2>Проекты</h2>
 
-        <div className="projects-grid">
+          {isProjectsLoading && <p>Загрузка проектов...</p>}
+          {isProjectsError && <p>Не удалось загрузить проекты.</p>}
+
+          {!isProjectsLoading && !isProjectsError && (
+          <div className="projects-grid">
           {projects.map((project) => (
               <article className="project-card" key={project.id}>
                 <img src={project.image || ''} alt={project.title || ''} />
@@ -106,6 +130,7 @@ function HomePage() {
               </article>
           ))}
         </div>
+      )}
       </section>
     </>
   )

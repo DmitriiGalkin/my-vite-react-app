@@ -43,6 +43,7 @@ exports.delete = function(req, res) {
 exports.findAll = async (req, res) => {
     try {
         Project.findAll({...req.query, passportId: req.passport?.id }, function(err, projects) {
+            console.log(projects, 'projects')
             async.map(projects.map(p=>p.placeId), Place.findById, function(err, places) {
                 async.map(projects.map(p=>p.id), Participation.findByProjectId, function(err, participations) {
                     async.map(projects.map(p=>p.id), Meet.findRecommendationByProjectId, function(err, recommendMeets) {

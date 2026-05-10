@@ -28,6 +28,7 @@ Place.findAll = () => function (result) {
 // };
 Place.findById = function (id, result) {
     dbConn.query("SELECT * FROM place WHERE id = ?", [id], function (err, res) {
+        console.log(err, "err");
         result(null, res.length ? res[0] : undefined);
     });
 };

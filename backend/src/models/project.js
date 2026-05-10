@@ -37,13 +37,13 @@ Project.findAll = function (params, result) {
     }
 
     let where = 'WHERE '
-    where += (params.deleted === 'true' ? 'deleted IS NOT NULL OR deleted IS NULL' : 'deleted IS NULL')
+    where += (params.deleted === 'true' ? 'deletedAt IS NOT NULL OR deleted IS NULL' : 'deletedAt IS NULL')
     where = (params.variant === 'participation' && params.userId) ? 'LEFT JOIN participation ON participation.projectId = project.id ' + where + ' AND participation.userId = ' + params.userId : where
     where += ' AND passportId = ' + ((params.variant === 'self' && params.passportId) ? params.passportId : 'passportId')
     where += ((params.type === 'recommendation' && params.passportId) ? ' AND passportId != ' + params.passportId : '')
 
-    const l = `SELECT project.* FROM project ${where}`
-    // console.log(l,'l')
+    const l = `SELECT projects.* FROM projects ${where}`
+    console.log(l,'l')
 
     dbConn.query(l, function (err, res) {
         result(null, res || []);

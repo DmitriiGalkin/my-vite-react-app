@@ -1,5 +1,6 @@
 import React from 'react'
 import { renderToString } from 'react-dom/server'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
 import {StaticRouter} from "react-router-dom";
 
@@ -82,11 +83,15 @@ async function getMetaByUrl(url: string): Promise<PageMeta> {
 
 export async function render(url: string) {
     const meta = await getMetaByUrl(url)
+    const queryClient = new QueryClient()
+
     const html = renderToString(
         <React.StrictMode>
-            <StaticRouter location={url}>
-                <App />
-            </StaticRouter>
+            <QueryClientProvider client={queryClient}>
+                <StaticRouter location={url}>
+                    <App />
+                </StaticRouter>
+            </QueryClientProvider>
         </React.StrictMode>,
     )
 

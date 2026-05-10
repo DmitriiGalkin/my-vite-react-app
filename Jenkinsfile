@@ -73,6 +73,7 @@ pipeline {
 
                   docker run --rm \
                     --user "$(id -u):$(id -g)" \
+                    --env-file "$WORKSPACE/.env" \
                     -e HOME=/tmp \
                     -e npm_config_cache=/tmp/.npm \
                     -v "$WORKSPACE:/workspace" \

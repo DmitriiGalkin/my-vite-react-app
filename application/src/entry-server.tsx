@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
 import {StaticRouter} from "react-router-dom";
 
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000'
+
 type PageMeta = {
     title: string
     description: string
@@ -56,7 +58,7 @@ async function getMetaByUrl(url: string): Promise<PageMeta> {
     if (projectMatch) {
         const projectId = projectMatch[1]
 
-        const response = await fetch(`http://localhost:4000/meta/project/${projectId}`)
+        const response = await fetch(`${API_URL}/meta/project/${projectId}`)
         const projectMeta = await response.json()
 
         return {

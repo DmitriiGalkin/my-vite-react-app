@@ -8,7 +8,7 @@ import type { Project } from './types'
 import { useQuery } from '@tanstack/react-query'
 
 async function fetchProjects(): Promise<Project[]> {
-    const response = await fetch('http://localhost:4000/projects')
+    const response = await fetch('http://84.54.59.146:4000/projects')
 
     if (!response.ok) {
         throw new Error('Не удалось загрузить проекты')
@@ -28,6 +28,8 @@ function HomePage() {
         queryKey: ['projects'],
         queryFn: fetchProjects,
     })
+
+    console.log(projects,'projects')
 
   return (
     <>

@@ -83,16 +83,16 @@ pipeline {
 
                   docker rm -f "$CONTAINER_NAME" || true
 
-                docker run -d \
-                  --name "$CONTAINER_NAME" \
-                  --restart unless-stopped \
-                  -p "$HOST_PORT:$APP_PORT" \
-                  -e HOME=/tmp \
-                  -e npm_config_cache=/tmp/.npm \
-                  -v "$WORKSPACE:/workspace" \
-                  -w /workspace/application \
-                  "$NODE_IMAGE" \
-                  sh -lc "npm install -g pm2 && pm2 start ../backend/src/index.js --name backend && pm2 start server.js --name $APP_NAME --no-daemon"
+                    docker run -d \
+                      --name "$CONTAINER_NAME" \
+                      --restart unless-stopped \
+                      -p "$HOST_PORT:$APP_PORT" \
+                      -e HOME=/tmp \
+                      -e npm_config_cache=/tmp/.npm \
+                      -v "$WORKSPACE:/workspace" \
+                      -w /workspace \
+                      "$NODE_IMAGE" \
+                      sh -lc "npm install -g pm2 && pm2 start backend/src/index.js --name backend && pm2 start application/server.js --name $APP_NAME --no-daemon"
 
                   sleep 5
 

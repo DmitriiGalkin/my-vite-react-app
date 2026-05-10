@@ -55,7 +55,7 @@ exports.yandex = new YandexStrategy({
 
 exports.vkontakte = new VKStrategy({
         clientID: process.env.VKONTAKTE_STRATEGY_CLIENT_ID,
-        clientSecret: process.env.VKONTAKTE_STRATEGY_CLIENT_ID,
+        clientSecret: process.env.VKONTAKTE_STRATEGY_CLIENT_SECRET,
         callbackURL: process.env.BACKEND_SERVER + '/oauth2/redirect/vkontakte',
     }, findOrCreate
 )

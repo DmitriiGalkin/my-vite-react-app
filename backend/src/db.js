@@ -2,10 +2,10 @@
 const mysql = require('mysql2');
 
 const dbConn = mysql.createConnection({
-    host     : 'quantum',
-    user     : 'user1',
-    password : 'Quant528#',
-    database : 'quantum',
+    host     : '84.54.59.146',
+    user     : 'newuser',
+    password : 'strong_password',
+    database : 'evo',
 });
 
 dbConn.connect(function(err) {

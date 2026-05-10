@@ -1,6 +1,5 @@
 'use strict';
 const async = require("async");
-const createError = require('http-errors')
 const Project = require('../models/project');
 const User = require('../models/user');
 const Passport = require('../models/passport');
@@ -8,7 +7,6 @@ const Visit = require('../models/visit');
 const Meet = require('../models/meet');
 const Place = require('../models/place');
 const Participation = require('../models/participation');
-const Invite = require('../models/invite');
 
 exports.create = function(req, res) {
     const project = new Project({...req.body, passportId: req.passport?.id });
@@ -29,12 +27,10 @@ exports.delete = function(req, res) {
         if (project.passportId !== req.passport.id) res.json({error: true, message: "Вы не владелец проекта, чтобы принимать решение по удалению"});
 
         Meet.findByProjectId(project.id, function (err, meets) {
-            async.map(meets.map(m=>m.id), Meet.delete, function(err, deletedMeets) {
-                Invite.deleteByProjectId(project.id, function () {
+            async.map(meets.map(m=>m.id), Meet.delete, function() {
                     Project.delete(project.id, function () {
                         res.json({error: false, message: 'Проект удален'});
                     });
-                });
             })
         });
     })
@@ -91,3 +87,18 @@ exports.findById = function(req, res) {
     });
 };
 
+exports.meta = function(req, res) {
+    Project.findById(req.params.id, function(err, project) {
+        if (err) return res.json({error:true, message: "Проект не существует"})
+
+        res.json({
+            title: project.title + ' | Quantum',
+            description: project.description,
+            ogSiteName: 'Quantum | Проекты',
+            ogType: 'article',
+            ogTitle: project.title,
+            ogDescription: project.description,
+            ogImage: project.image,
+        });
+    })
+};

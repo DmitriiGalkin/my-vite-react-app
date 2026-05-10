@@ -5,12 +5,11 @@ var passport = require('passport');
 const user =   require('./controllers/user');
 const passportController =   require('./controllers/passport');
 const meet =   require('./controllers/meet');
+const visit =   require('./controllers/visit');
 const image =   require('./controllers/image');
 const place =   require('./controllers/place');
 const project =   require('./controllers/project');
 const participation =   require('./controllers/participation');
-const invite =   require('./controllers/invite');
-const meta = require('./controllers/meta');
 const strategys =   require('./strategys');
 const helper =   require('./helper');
 
@@ -71,6 +70,7 @@ router.get('/project/:id', passportController.usePassport, project.findById);
 router.post('/project', passportController.usePassport, helper.checkConstructor, project.create);
 router.put('/project/:id', passportController.usePassport, helper.checkConstructor, project.update);
 router.delete('/project/:id', passportController.usePassport, project.delete );
+router.get('/project/:id/meta', project.meta );
 
 /**
  * Места
@@ -110,26 +110,5 @@ router.get('/user/:id', passportController.usePassport, user.findById);
 router.post('/user', passportController.usePassport, helper.checkConstructor, user.create);
 router.put('/user/:id', passportController.usePassport, helper.checkConstructor, user.update);
 router.delete('/user/:id', passportController.usePassport, user.delete );
-
-/**
- * Идеи
- */
-router.get('/ideas', passportController.usePassport, idea.findAll);
-router.get('/idea/:id', passportController.usePassport, idea.findById);
-router.post('/idea', passportController.usePassport, helper.checkConstructor, idea.create);
-router.put('/idea/:id', passportController.usePassport, helper.checkConstructor, idea.update);
-router.delete('/idea/:id', passportController.usePassport, idea.delete );
-
-/**
- * Приглашения
- */
-router.post('/invite', passportController.usePassport, invite.create);
-router.delete('/invite/:id', passportController.usePassport, invite.delete );
-router.post('/invite/:id/accept', passportController.usePassport, invite.accept );
-
-/**
- * Мета
- */
-router.get('/meta/:type/:id', meta.get );
 
 module.exports = router

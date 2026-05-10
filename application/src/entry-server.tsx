@@ -57,8 +57,9 @@ async function getMetaByUrl(url: string): Promise<PageMeta> {
 
     if (projectMatch) {
         const projectId = projectMatch[1]
-
+        console.log('11', API_URL)
         const response = await fetch(`${API_URL}/meta/project/${projectId}`)
+        console.log('12')
         const projectMeta = await response.json()
 
         return {

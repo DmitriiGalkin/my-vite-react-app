@@ -18,9 +18,27 @@ pipeline {
     }
 
     stages {
+        stage('Prepare workspace') {
+            steps {
+                sh '''
+                  set +e
+
+                  docker rm -f "$CONTAINER_NAME" || true
+
+                  if [ -d "$WORKSPACE" ]; then
+                    docker run --rm \
+                      -v "$WORKSPACE:/workspace" \
+                      "$NODE_IMAGE" \
+                      sh -lc "chown -R $(id -u):$(id -g) /workspace || true"
+                  fi
+                '''
+
+                deleteDir()
+            }
+        }
+
         stage('Checkout') {
             steps {
-                deleteDir()
                 checkout scm
 
                 sh '''
@@ -46,8 +64,9 @@ pipeline {
                   set -eux
 
                   docker run --rm \
-                    -v "$WORKSPACE:/app" \
-                    -w "/app/$APP_DIR" \
+                    --user "$(id -u):$(id -g)" \
+                    -v "$WORKSPACE/$APP_DIR:/app" \
+                    -w /app \
                     "$NODE_IMAGE" \
                     sh -lc "npm ci && npm run build && test -f dist/index.html"
                 '''
@@ -65,8 +84,8 @@ pipeline {
                     --name "$CONTAINER_NAME" \
                     --restart unless-stopped \
                     -p "$HOST_PORT:$APP_PORT" \
-                    -v "$WORKSPACE:/app" \
-                    -w "/app/$APP_DIR" \
+                    -v "$WORKSPACE/$APP_DIR:/app" \
+                    -w /app \
                     "$NODE_IMAGE" \
                     sh -lc "npm install -g pm2 && pm2 start server.js --name $APP_NAME --no-daemon"
 
@@ -91,6 +110,19 @@ pipeline {
 
             sh '''
               docker logs "$CONTAINER_NAME" --tail 200 || true
+            '''
+        }
+
+        cleanup {
+            sh '''
+              set +e
+
+              if [ -d "$WORKSPACE" ]; then
+                docker run --rm \
+                  -v "$WORKSPACE:/workspace" \
+                  "$NODE_IMAGE" \
+                  sh -lc "chown -R $(id -u):$(id -g) /workspace || true"
+              fi
             '''
         }
     }

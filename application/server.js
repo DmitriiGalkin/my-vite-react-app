@@ -3,11 +3,15 @@ import path from 'path'
 import express from 'express'
 import { createServer as createViteServer } from 'vite'
 
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
 async function createServer() {
     const app = express()
 
     // Создаем Vite сервер в режиме middleware
     const vite = await createViteServer({
+        root: __dirname,
         server: { middlewareMode: true },
         appType: 'custom'
     })
@@ -19,7 +23,7 @@ async function createServer() {
 
         try {
             // 1. Читаем index.html
-            let template = fs.readFileSync(path.resolve('index.html'), 'utf-8')
+            let template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8')
 
             // 2. Применяем Vite HTML трансформации
             template = await vite.transformIndexHtml(url, template)

@@ -15,6 +15,7 @@ pipeline {
         APP_DIR = 'application'
         APP_PORT = '3000'
         HOST_PORT = '80'
+        BACKEND_DIR = 'backend'
     }
 
     stages {
@@ -67,10 +68,10 @@ pipeline {
                     --user "$(id -u):$(id -g)" \
                     -e HOME=/tmp \
                     -e npm_config_cache=/tmp/.npm \
-                    -v "$WORKSPACE/$APP_DIR:/app" \
-                    -w /app \
+                    -v "$WORKSPACE:/workspace" \
+                    -w /workspace \
                     "$NODE_IMAGE" \
-                    sh -lc "npm ci && npm run build && test -f dist/index.html"
+                    sh -lc "cd application && npm ci && npm run build && test -f dist/index.html && cd ../backend && npm ci"
                 '''
             }
         }
@@ -82,14 +83,16 @@ pipeline {
 
                   docker rm -f "$CONTAINER_NAME" || true
 
-                  docker run -d \
-                    --name "$CONTAINER_NAME" \
-                    --restart unless-stopped \
-                    -p "$HOST_PORT:$APP_PORT" \
-                    -v "$WORKSPACE/$APP_DIR:/app" \
-                    -w /app \
-                    "$NODE_IMAGE" \
-                    sh -lc "npm install -g pm2 && pm2 start server.js --name $APP_NAME --no-daemon"
+                docker run -d \
+                  --name "$CONTAINER_NAME" \
+                  --restart unless-stopped \
+                  -p "$HOST_PORT:$APP_PORT" \
+                  -e HOME=/tmp \
+                  -e npm_config_cache=/tmp/.npm \
+                  -v "$WORKSPACE:/workspace" \
+                  -w /workspace/application \
+                  "$NODE_IMAGE" \
+                  sh -lc "npm install -g pm2 && pm2 start ../backend/src/index.js --name backend && pm2 start server.js --name $APP_NAME --no-daemon"
 
                   sleep 5
 

@@ -42,7 +42,7 @@ Project.findAll = function (params, result) {
     where += ' AND passportId = ' + ((params.variant === 'self' && params.passportId) ? params.passportId : 'passportId')
     where += ((params.type === 'recommendation' && params.passportId) ? ' AND passportId != ' + params.passportId : '')
 
-    const l = `SELECT projects.* FROM projects ${where}`
+    const l = `SELECT project.* FROM project ${where}`
     console.log(l,'l')
 
     dbConn.query(l, function (err, res) {

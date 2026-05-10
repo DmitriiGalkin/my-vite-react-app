@@ -68,6 +68,7 @@ pipeline {
                     -v "$WORKSPACE/$APP_DIR:/app" \
                     -w /app \
                     "$NODE_IMAGE" \
+                    sh 'sudo chown -R 114:120 /.npm'
                     sh -lc "npm ci && npm run build && test -f dist/index.html"
                 '''
             }

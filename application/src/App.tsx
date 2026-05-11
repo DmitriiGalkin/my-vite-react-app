@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import {useEffect, useState} from 'react'
 import { Link, Route, Routes } from 'react-router-dom'
 import ProjectPage from './ProjectPage'
 import EditProjectPage from './EditProjectPage'
@@ -6,17 +6,32 @@ import PlaceSelectPage from './PlaceSelectPage'
 import './App.css'
 import type { Project } from './types'
 import { useQuery } from '@tanstack/react-query'
+import {apiFetch} from "./api.ts";
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000'
+const ACCESS_TOKEN_STORAGE_KEY = 'access_token'
 
-async function fetchProjects(): Promise<Project[]> {
-    const response = await fetch(`${API_URL}/projects`)
-
-    if (!response.ok) {
-        throw new Error('Не удалось загрузить проекты')
+function saveAccessTokenFromUrl() {
+    if (typeof window === 'undefined') {
+        return null
     }
 
-    return response.json()
+    const url = new URL(window.location.href)
+    const accessToken = url.searchParams.get('access_token')
+
+    if (!accessToken) {
+        return localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY)
+    }
+
+    localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, accessToken)
+    url.searchParams.delete('access_token')
+    window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`)
+
+    return accessToken
+}
+
+async function fetchProjects(): Promise<Project[]> {
+    return apiFetch<Project[]>('/projects')
 }
 
 const authStrategies = [
@@ -44,6 +59,11 @@ const authStrategies = [
 
 function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+    const [accessToken, setAccessToken] = useState<string | null>(null)
+
+    useEffect(() => {
+        setAccessToken(saveAccessTokenFromUrl())
+    }, [])
 
     const {
         data: projects = [],
@@ -52,6 +72,7 @@ function HomePage() {
     } = useQuery({
         queryKey: ['projects'],
         queryFn: fetchProjects,
+        enabled: accessToken !== null,
     })
 
     console.log(projects,'projects')
@@ -93,25 +114,42 @@ function HomePage() {
         <section className="auth-section" aria-labelledby="auth-section-title">
             <div className="auth-section-content">
                 <div>
-                    <h2 id="auth-section-title">Войти в аккаунт</h2>
-                    <p>Выберите удобный способ авторизации</p>
+                    <h2 id="auth-section-title">
+                        {accessToken ? 'Вы авторизованы' : 'Войти в аккаунт'}
+                    </h2>
+                    <p>
+                        {accessToken ? 'Теперь доступны защищённые разделы' : 'Выберите удобный способ авторизации'}
+                    </p>
                 </div>
 
-                <div className="auth-strategies">
-                    {authStrategies.map((strategy) => (
-                        <a
-                            className="auth-strategy"
-                            href={strategy.href}
-                            key={strategy.title}
-                        >
-                            <span className="auth-strategy-icon">{strategy.icon}</span>
-                            <span>{strategy.title}</span>
-                        </a>
-                    ))}
-                </div>
+                {accessToken ? (
+                    <button
+                        className="auth-strategy"
+                        type="button"
+                        onClick={() => {
+                            localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
+                            setAccessToken(null)
+                        }}
+                    >
+                        <span className="auth-strategy-icon">×</span>
+                        <span>Выйти</span>
+                    </button>
+                ) : (
+                    <div className="auth-strategies">
+                        {authStrategies.map((strategy) => (
+                            <a
+                                className="auth-strategy"
+                                href={strategy.href}
+                                key={strategy.title}
+                            >
+                                <span className="auth-strategy-icon">{strategy.icon}</span>
+                                <span>{strategy.title}</span>
+                            </a>
+                        ))}
+                    </div>
+                )}
             </div>
         </section>
-
       {isMenuOpen && (
         <section className="home-menu">
           <header className="home-menu-header">

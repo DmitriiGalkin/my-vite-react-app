@@ -22,7 +22,6 @@ authProviders.forEach((provider) => {
     passport.use(provider, strategys[provider]);
 
     router.get(`/login/${provider}`, passport.authenticate(provider));
-
     router.get(`/oauth2/redirect/${provider}`, (req, res) => {
         passport.authenticate(provider, function(err, user) {
             if (err || !user) {

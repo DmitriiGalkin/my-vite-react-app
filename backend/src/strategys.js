@@ -25,8 +25,9 @@ function findOrCreate(accessToken, refreshToken, profile, cb) {
                 // image,
                 email,
                 provider: profile.provider,
+                providerId: profile.id,
             });
-          Passport.create(user, function(err, data) {
+          Passport.create(user, function() {
                 return cb(null, { username: accessToken });
             });
         }

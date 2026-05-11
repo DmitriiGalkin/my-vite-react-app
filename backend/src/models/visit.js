@@ -51,7 +51,7 @@ Visit.findByUserAndMeetIds = function(userId, meetId, result){
 };
 Visit.findByMeet = function(meet, result){
     dbConn.query("SELECT visit.* FROM visit WHERE meetId = ?", [meet.id], function (err, res) {
-        result(null, res);
+        result(null, res || []);
     });
 };
 

@@ -3,14 +3,29 @@ import type { Map as LeafletMap, Marker as LeafletMarker } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useNavigate } from 'react-router-dom'
 import './PlaceSelectPage.css'
-import { places } from './mocks'
+import type {Place} from "./types.ts";
+import {apiFetch} from "./api.ts";
+import {useQuery} from "@tanstack/react-query";
+
+async function fetchPlaces(): Promise<Place[]> {
+  return apiFetch<Place[]>('/places')
+}
 
 function PlaceSelectPage() {
   const navigate = useNavigate()
   const mapRef = useRef<HTMLDivElement | null>(null)
   const mapInstanceRef = useRef<LeafletMap | null>(null)
   const markersRef = useRef<LeafletMarker[]>([])
-  const [selectedPlaceId, setSelectedPlaceId] = useState(places[0].id)
+  const [selectedPlaceId, setSelectedPlaceId] = useState<number | null>(null)
+
+  const {
+    data: places = [],
+    isLoading: isPlacesLoading,
+    isError: isPlacesError,
+  } = useQuery({
+    queryKey: ['places'],
+    queryFn: fetchPlaces,
+  })
 
   useEffect(() => {
     let isMounted = true

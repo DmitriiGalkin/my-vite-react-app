@@ -53,8 +53,9 @@ Meet.findById = function (id, result) {
     });
 };
 Meet.findByProjectId = function (id, result) {
-    dbConn.query("SELECT meet.*, date_format(datetime, '%Y-%m-%d %H:%i:%s') as datetime FROM meet WHERE projectId = ? AND DATE(datetime) >= CURDATE() AND deleted IS NULL ORDER BY datetime", id, function (err, res) {
-        result(null, res);
+    dbConn.query("SELECT meet.*, date_format(startedAt, '%Y-%m-%d %H:%i:%s') as startedAt FROM meet WHERE projectId = ? AND DATE(startedAt) >= CURDATE() AND deletedAt IS NULL ORDER BY startedAt", id, function (err, res) {
+        console.log(err,'err')
+        result(null, res || []);
     });
 };
 

@@ -57,34 +57,83 @@ exports.findAll = async (req, res) => {
         res.end("error page");
     }
 };
-exports.findById = function(req, res) {
-    Project.findById(req.params.id, function(err, project) {
-        if (!project) {
-            res.status(400).send({ error:true, message: 'Проект с таким номером не найден' });
-        } else {
-            Place.findById(project.placeId, function(err, place) {
-                Passport.findById(project.passportId, function (err, passport) {
-                    Participation.findByProjectId(project.id, function (err, participations) {
-                        Meet.findByProjectId(project.id, function (err, meets) {
-                            async.map(participations.map(p=>p.userId), User.findById, function(err, users) {
-                                async.map(meets, Visit.findByMeet, function(err, visits) {
-                                    async.map(meets, User.findByMeet, function(err, visitUsers) {
-                                        res.send({
-                                            ...project,
-                                            passport,
-                                            place,
-                                            meets: meets?.map((m, index) => ({ ...m, visits: visits[index].map((v, index2)=>({...v, user: visitUsers[index][index2] })) })),
-                                            participations: participations.map((m, index) => ({...m, user: users[index]}))
-                                        });
-                                    })
-                                })
-                            })
-                        })
-                    })
-                })
-            })
-        }
+
+function callModel(method, ...args) {
+    return new Promise((resolve, reject) => {
+        method(...args, function(err, result) {
+            if (err) {
+                reject(err);
+                return;
+            }
+
+            resolve(result);
+        });
     });
+}
+
+exports.findById = async function(req, res) {
+    try {
+        const project = await callModel(Project.findById, req.params.id);
+
+        if (!project) {
+            return res.status(400).send({
+                error: true,
+                message: 'Проект с таким номером не найден',
+            });
+        }
+
+        const [
+            place,
+            passport,
+            participations,
+            meets,
+        ] = await Promise.all([
+            callModel(Place.findById, project.placeId),
+            callModel(Passport.findById, project.passportId),
+            callModel(Participation.findByProjectId, project.id),
+            callModel(Meet.findByProjectId, project.id),
+        ]);
+        console.log(meets, 'meets')
+        const [
+            users,
+            visits,
+            visitUsers,
+        ] = await Promise.all([
+            Promise.all(participations.map((participation) => (
+                callModel(User.findById, participation.userId)
+            ))),
+            Promise.all(meets.map((meet) => (
+                callModel(Visit.findByMeet, meet)
+            ))),
+            Promise.all(meets.map((meet) => (
+                callModel(User.findByMeet, meet)
+            ))),
+        ]);
+
+        res.send({
+            ...project,
+            passport,
+            place,
+            meets: meets.map((meet, meetIndex) => ({
+                ...meet,
+                visits: visits[meetIndex].map((visit, visitIndex) => ({
+                    ...visit,
+                    user: visitUsers[meetIndex][visitIndex],
+                })),
+            })),
+            participations: participations.map((participation, participationIndex) => ({
+                ...participation,
+                user: users[participationIndex],
+            })),
+        });
+    } catch (err) {
+        console.error(err);
+
+        res.status(500).send({
+            error: true,
+            message: 'Не удалось получить проект',
+        });
+    }
 };
 
 exports.meta = function(req, res) {

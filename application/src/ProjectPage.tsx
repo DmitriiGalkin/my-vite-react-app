@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
+  Alert,
   Avatar,
   AvatarGroup,
   Box,
@@ -9,6 +10,7 @@ import {
   CardContent,
   CardMedia,
   Chip,
+  CircularProgress,
   Container,
   Divider,
   Paper,
@@ -20,17 +22,38 @@ import EditIcon from '@mui/icons-material/Edit'
 import EventIcon from '@mui/icons-material/Event'
 import PaymentsIcon from '@mui/icons-material/Payments'
 import ScheduleIcon from '@mui/icons-material/Schedule'
+import { useQuery } from '@tanstack/react-query'
 import { meetings } from './mocks'
-import type {Project} from "./types.ts";
-import {apiFetch} from "./api.ts";
-import {useQuery} from "@tanstack/react-query";
+import { apiFetch } from './api.ts'
+import type {Meet, Project} from './types'
 
-async function fetchProject(): Promise<Project[]> {
-  return apiFetch<Project[]>('/project')
+interface ExtendedProject extends Project {
+  passport?: {
+    title: string
+  }
+  place?: {
+    title: string
+  }
+    meets?: Meet[]
+}
+
+async function fetchProject(id: string): Promise<ExtendedProject> {
+  return apiFetch<ExtendedProject>(`/project/${id}`)
 }
 
 function ProjectPage() {
   const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>()
+
+  const {
+    data: project,
+    isLoading: isProjectLoading,
+    isError: isProjectError,
+  } = useQuery({
+    queryKey: ['project', id],
+    queryFn: () => fetchProject(id as string),
+    enabled: Boolean(id),
+  })
 
   const userImages = [
     'https://randomuser.me/api/portraits/women/12.jpg',
@@ -39,18 +62,36 @@ function ProjectPage() {
     'https://randomuser.me/api/portraits/men/45.jpg',
   ]
 
-  const {
-    data: project
-  } = useQuery({
-    queryKey: ['project'],
-    queryFn: fetchProject,
-  })
-
-  console.log(project, 'project')
-
   useEffect(() => {
-    document.title = 'Эпоксидная смола'
-  }, [])
+    document.title = project?.title || 'Проект'
+  }, [project?.title])
+
+  if (!id) {
+    return (
+        <Container maxWidth="sm" sx={{ py: 8 }}>
+          <Alert severity="error">Не указан id проекта.</Alert>
+        </Container>
+    )
+  }
+
+  if (isProjectLoading) {
+    return (
+        <Container maxWidth="sm" sx={{ py: 8 }}>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <CircularProgress size={24} />
+            <Typography>Загрузка проекта...</Typography>
+          </Stack>
+        </Container>
+    )
+  }
+
+  if (isProjectError || !project) {
+    return (
+        <Container maxWidth="sm" sx={{ py: 8 }}>
+          <Alert severity="error">Не удалось загрузить проект.</Alert>
+        </Container>
+    )
+  }
 
   return (
       <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
@@ -73,7 +114,7 @@ function ProjectPage() {
 
             <Button
                 component={Link}
-                to="/project/1/edit"
+                to={`/project/${id}/edit`}
                 variant="outlined"
                 startIcon={<EditIcon />}
             >
@@ -93,8 +134,8 @@ function ProjectPage() {
             <CardMedia
                 component="img"
                 height="360"
-                image="https://thumbs.dreamstime.com/z/none-165853060.jpg"
-                alt="Эпоксидная смола"
+                image={project.image || 'https://thumbs.dreamstime.com/z/none-165853060.jpg'}
+                alt={project.title || 'Проект'}
                 sx={{
                   objectFit: 'cover',
                   height: {
@@ -118,7 +159,7 @@ function ProjectPage() {
                         },
                       }}
                   >
-                    Эпоксидная смола
+                    {project.title}
                   </Typography>
 
                   <Typography
@@ -132,8 +173,7 @@ function ProjectPage() {
                         lineHeight: 1.7,
                       }}
                   >
-                    Изготовление изделий из эпоксидной смолы, изучение различных техник заливки,
-                    форм, цветов, текстур.
+                    {project.description}
                   </Typography>
                 </Box>
 
@@ -169,7 +209,7 @@ function ProjectPage() {
                       Место
                     </Typography>
                     <Typography fontWeight={800}>
-                      Лесной дом
+                        {project?.place?.title}
                     </Typography>
                   </Paper>
 
@@ -185,7 +225,7 @@ function ProjectPage() {
                       Возраст
                     </Typography>
                     <Typography fontWeight={800}>
-                      5-7 лет
+                        {project.ageFrom}-{project.ageTo} лет
                     </Typography>
                   </Paper>
 
@@ -201,7 +241,7 @@ function ProjectPage() {
                       Организатор
                     </Typography>
                     <Typography fontWeight={800}>
-                      Галкин Дмитрий
+                        {project?.passport?.title}
                     </Typography>
                   </Paper>
                 </Box>
@@ -214,7 +254,7 @@ function ProjectPage() {
                   </Typography>
 
                   <Stack spacing={2}>
-                    {meetings
+                    {project.meets
                         .filter((meeting) => !meeting.deletedAt)
                         .map((meeting) => {
                           const startedAt = new Date(meeting.startedAt)

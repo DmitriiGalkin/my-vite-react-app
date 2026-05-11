@@ -1,4 +1,4 @@
-import type { Meet, Project, Place } from './types'
+import type { Meet } from './types'
 
 export const meetings: Meet[] = [
   {
@@ -24,85 +24,5 @@ export const meetings: Meet[] = [
     duration: '1 час 30 минут',
     startedAt: '2026-12-01T15:00:00',
     deletedAt: null,
-  },
-]
-
-export const projects: Project[] = [
-  {
-    id: 1,
-    userId: 101,
-    passportId: 1001,
-    placeId: 201,
-    latitude: 55.755864,
-    longitude: 37.617698,
-    title: 'Детская робототехника',
-    description: 'Проект для детей, которые хотят собрать своего первого робота.',
-    image: 'https://thumbs.dreamstime.com/z/none-165853060.jpg',
-    ageFrom: 7,
-    ageTo: 12,
-    deletedAt: null,
-  },
-  {
-    id: 2,
-    userId: 102,
-    passportId: 1002,
-    placeId: 202,
-    latitude: 59.939095,
-    longitude: 30.315868,
-    title: 'Творческая мастерская',
-    description: 'Рисование, лепка и создание поделок в дружной команде.',
-    image: 'https://thumbs.dreamstime.com/z/none-165853060.jpg',
-    ageFrom: 5,
-    ageTo: 10,
-    deletedAt: null,
-  },
-  {
-    id: 3,
-    userId: 103,
-    passportId: 1003,
-    placeId: 203,
-    latitude: 56.838011,
-    longitude: 60.597465,
-    title: 'Спортивные встречи',
-    description: 'Активные занятия, игры и тренировки на свежем воздухе.',
-    image: 'https://thumbs.dreamstime.com/z/none-165853060.jpg',
-    ageFrom: 8,
-    ageTo: 14,
-    deletedAt: null,
-  },
-]
-
-export const places: Place[] = [
-  {
-    id: 1,
-    title: 'Лесной дом',
-    description: 'Творческое пространство рядом с парком',
-    address: 'Москва, Лесная улица, 12',
-    latitude: 55.781655,
-    longitude: 37.588222,
-  },
-  {
-    id: 2,
-    title: 'Перекресток',
-    description: 'Зал для встреч и мастер-классов',
-    address: 'Москва, Тверская улица, 8',
-    latitude: 55.759893,
-    longitude: 37.609389,
-  },
-  {
-    id: 3,
-    title: 'Светлая студия',
-    description: 'Небольшой зал с окнами и столами',
-    address: 'Москва, Арбат, 20',
-    latitude: 55.752036,
-    longitude: 37.592671,
-  },
-  {
-    id: 4,
-    title: 'Дом творчества',
-    description: 'Подходит для детских занятий',
-    address: 'Москва, Покровка, 15',
-    latitude: 55.760614,
-    longitude: 37.641772,
   },
 ]

@@ -92,7 +92,7 @@ function HomePage() {
     } = useQuery({
         queryKey: ['projects'],
         queryFn: fetchProjects,
-        enabled: accessToken !== null,
+        //enabled: accessToken !== null,
     })
 
     return (

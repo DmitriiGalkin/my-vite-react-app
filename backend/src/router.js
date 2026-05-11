@@ -16,11 +16,23 @@ const helper =   require('./helper');
 /**
  * Стратегии авторизации
  */
-passport.use(strategys.google);
-passport.use(strategys.mailru);
-passport.use(strategys.yandex);
-passport.use(strategys.vkontakte);
+const authProviders = ['google', 'mailru', 'yandex', 'vkontakte'];
 
+authProviders.forEach((provider) => {
+    passport.use(provider, strategys[provider]);
+
+    router.get(`/login/${provider}`, passport.authenticate(provider));
+
+    router.get(`/oauth2/redirect/${provider}`, (req, res) => {
+        passport.authenticate(provider, function(err, user) {
+            if (err || !user) {
+                return res.redirect('/login');
+            }
+
+            return res.redirect(`${process.env.FRONTEND_SERVER}/?access_token=${user.username}`);
+        })(req, res);
+    });
+});
 
 /**
  * Родитель
@@ -33,28 +45,6 @@ router.put('/passport', passportController.usePassport, passportController.updat
  */
 router.post('/passport/login', passportController.login);
 router.post('/passport/googleLogin', passportController.googleLogin);
-router.get('/login/google', passport.authenticate('google'));
-router.get('/oauth2/redirect/google', (req, res) => passport.authenticate('google', function(err, user) {
-    console.log(user,'user')
-    if (!user) { return res.redirect('/login'); }
-    res.redirect(process.env.FRONTEND_SERVER + '/?access_token=' + user.username);
-})(req, res));
-router.get('/login/mailru', passport.authenticate('mailru'));
-router.get('/oauth2/redirect/mailru', (req, res) => passport.authenticate('mailru', function(err, user) {
-    if (!user) { return res.redirect('/login'); }
-    res.redirect(process.env.FRONTEND_SERVER + '/?access_token=' + user.username);
-})(req, res));
-router.get('/login/yandex', passport.authenticate('yandex'));
-router.get('/oauth2/redirect/yandex', (req, res) => passport.authenticate('yandex', function(err, user) {
-    if (!user) { return res.redirect('/login'); }
-    res.redirect(process.env.FRONTEND_SERVER + '/?access_token=' + user.username);
-})(req, res));
-router.get('/login/vkontakte', passport.authenticate('vkontakte'));
-router.get('/oauth2/redirect/vkontakte', (req, res) => passport.authenticate('vkontakte', function(err, user) {
-    if (!user) { return res.redirect('/login'); }
-    console.log(user,'user')
-    res.redirect(process.env.FRONTEND_SERVER + '/?access_token=' + user.username);
-})(req, res));
 
 /**
  * Картинки

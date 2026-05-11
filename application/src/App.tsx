@@ -19,6 +19,29 @@ async function fetchProjects(): Promise<Project[]> {
     return response.json()
 }
 
+const authStrategies = [
+    {
+        title: 'Google',
+        href: `${API_URL}/login/google`,
+        icon: 'G',
+    },
+    {
+        title: 'Mail.ru',
+        href: `${API_URL}/login/mailru`,
+        icon: '@',
+    },
+    {
+        title: 'Yandex',
+        href: `${API_URL}/login/yandex`,
+        icon: 'Я',
+    },
+    {
+        title: 'VK',
+        href: `${API_URL}/login/vkontakte`,
+        icon: 'VK',
+    },
+]
+
 function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
@@ -66,6 +89,28 @@ function HomePage() {
           </button>
         </div>
       </header>
+
+        <section className="auth-section" aria-labelledby="auth-section-title">
+            <div className="auth-section-content">
+                <div>
+                    <h2 id="auth-section-title">Войти в аккаунт</h2>
+                    <p>Выберите удобный способ авторизации</p>
+                </div>
+
+                <div className="auth-strategies">
+                    {authStrategies.map((strategy) => (
+                        <a
+                            className="auth-strategy"
+                            href={strategy.href}
+                            key={strategy.title}
+                        >
+                            <span className="auth-strategy-icon">{strategy.icon}</span>
+                            <span>{strategy.title}</span>
+                        </a>
+                    ))}
+                </div>
+            </div>
+        </section>
 
       {isMenuOpen && (
         <section className="home-menu">

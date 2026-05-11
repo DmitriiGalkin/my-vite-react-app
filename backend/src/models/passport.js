@@ -5,10 +5,13 @@ var Passport = function(data){
     this.title = data.title;
     this.email = data.email;
     this.accessToken = data.accessToken;
+    this.provider = data.provider;
 };
 // Создание родителя
 Passport.create = function (user, result) {
+    console.log(user,'user')
     dbConn.query("INSERT INTO passport set ?", user, function (err, res) {
+        console.log(res,'res')
         result(null, res.insertId);
     });
 };

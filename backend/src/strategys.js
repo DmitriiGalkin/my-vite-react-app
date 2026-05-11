@@ -1,8 +1,8 @@
 'use strict';
 const GoogleStrategy = require('passport-google-oauth20');
-const MailStrategy = require('passport-mail');
+//const MailStrategy = require('passport-mail');
 const YandexStrategy = require('passport-yandex').Strategy;
-const VKStrategy = require('passport-vkontakte').Strategy;
+//const VKStrategy = require('passport-vkontakte').Strategy;
 
 const Passport = require('./models/passport');
 const API_URL = process.env.VITE_API_URL || process.env.BACKEND_SERVER;
@@ -50,8 +50,8 @@ exports.google = createStrategy(GoogleStrategy, 'GOOGLE', {
     state: false,
 });
 
-exports.mailru = createStrategy(MailStrategy, 'MAILRU');
+//exports.mailru = createStrategy(MailStrategy, 'MAILRU');
 
 exports.yandex = createStrategy(YandexStrategy, 'YANDEX');
 
-exports.vkontakte = createStrategy(VKStrategy, 'VKONTAKTE');
+//exports.vkontakte = createStrategy(VKStrategy, 'VKONTAKTE');

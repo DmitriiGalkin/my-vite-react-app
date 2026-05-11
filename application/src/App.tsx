@@ -40,21 +40,21 @@ const authStrategies = [
         href: `${API_URL}/login/google`,
         icon: 'G',
     },
-    {
-        title: 'Mail.ru',
-        href: `${API_URL}/login/mailru`,
-        icon: '@',
-    },
+    // {
+    //     title: 'Mail.ru',
+    //     href: `${API_URL}/login/mailru`,
+    //     icon: '@',
+    // },
     {
         title: 'Yandex',
         href: `${API_URL}/login/yandex`,
         icon: 'Я',
     },
-    {
-        title: 'VK',
-        href: `${API_URL}/login/vkontakte`,
-        icon: 'VK',
-    },
+    // {
+    //     title: 'VK',
+    //     href: `${API_URL}/login/vkontakte`,
+    //     icon: 'VK',
+    // },
 ]
 
 function HomePage() {

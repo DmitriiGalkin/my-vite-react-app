@@ -16,7 +16,7 @@ const helper =   require('./helper');
 /**
  * Стратегии авторизации
  */
-const authProviders = ['google', 'mailru', 'yandex', 'vkontakte'];
+const authProviders = ['google', 'yandex']; //', 'vkontakte', 'mailru'
 
 authProviders.forEach((provider) => {
     passport.use(provider, strategys[provider]);

@@ -1,5 +1,21 @@
 import { Link, useNavigate } from 'react-router-dom'
-import './EditProjectPage.css'
+import {
+    Avatar,
+    Box,
+    Button,
+    Card,
+    CardContent,
+    Container,
+    IconButton,
+    Paper,
+    Stack,
+    TextField,
+    Typography,
+} from '@mui/material'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
+import LocationOnIcon from '@mui/icons-material/LocationOn'
+import SaveIcon from '@mui/icons-material/Save'
 
 const subscribers = [
     {
@@ -32,97 +48,267 @@ function EditProjectPage() {
     const navigate = useNavigate()
 
     return (
-        <main className="edit-project-page">
-            <header className="edit-project-header">
-                <button type="button" onClick={() => navigate(-1)} aria-label="Назад">
-                    ←
-                </button>
-                <h1>EditProject</h1>
-            </header>
+        <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
+            <Container maxWidth="md" sx={{ py: { xs: 2, sm: 4 } }}>
+                <Stack
+                    component="header"
+                    direction="row"
+                    alignItems="center"
+                    spacing={2}
+                    sx={{ mb: 3 }}
+                >
+                    <IconButton type="button" onClick={() => navigate(-1)} aria-label="Назад">
+                        <ArrowBackIcon />
+                    </IconButton>
 
-            <form className="edit-project-form">
-                <section className="edit-project-card">
-                    <label className="edit-project-field">
-                        <span>Название проекта</span>
-                        <input type="text" defaultValue="Женские встречи с заботой..." />
-                    </label>
+                    <Typography component="h1" variant="h4" fontWeight={900}>
+                        EditProject
+                    </Typography>
+                </Stack>
 
-                    <div className="edit-project-age-row">
-                        <label className="edit-project-field">
-                            <span>Возраст от</span>
-                            <input type="number" defaultValue={3} />
-                        </label>
+                <Box component="form">
+                    <Stack spacing={3}>
+                        <Card
+                            elevation={0}
+                            sx={{
+                                borderRadius: 4,
+                                border: 1,
+                                borderColor: 'divider',
+                            }}
+                        >
+                            <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+                                <Stack spacing={2.5}>
+                                    <TextField
+                                        label="Название проекта"
+                                        type="text"
+                                        defaultValue="Женские встречи с заботой..."
+                                        fullWidth
+                                    />
 
-                        <label className="edit-project-field">
-                            <span>Возраст до</span>
-                            <input type="number" defaultValue={3} />
-                        </label>
-                    </div>
-                </section>
+                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                                        <TextField
+                                            label="Возраст от"
+                                            type="number"
+                                            defaultValue={3}
+                                            fullWidth
+                                        />
 
-                <section className="edit-project-card">
-                    <label className="edit-project-field">
-                        <span>Описание</span>
-                        <textarea
-                            rows={6}
-                            defaultValue="Встречаемся, мажемся кремиками, массируем себя скребками, плавно потягиваемся и напитываемся нежностью."
-                        />
-                    </label>
-                </section>
+                                        <TextField
+                                            label="Возраст до"
+                                            type="number"
+                                            defaultValue={3}
+                                            fullWidth
+                                        />
+                                    </Stack>
+                                </Stack>
+                            </CardContent>
+                        </Card>
 
-                <section className="edit-project-card">
-                    <div className="edit-project-upload">
-                        <div>
-                            <span>Обложка проекта</span>
-                            <strong>Загрузите изображение для карточки</strong>
-                        </div>
-                        <label>
-                            Выбрать файл
-                            <input type="file" accept="image/*" />
-                        </label>
-                    </div>
-                </section>
+                        <Card
+                            elevation={0}
+                            sx={{
+                                borderRadius: 4,
+                                border: 1,
+                                borderColor: 'divider',
+                            }}
+                        >
+                            <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+                                <TextField
+                                    label="Описание"
+                                    multiline
+                                    rows={6}
+                                    defaultValue="Встречаемся, мажемся кремиками, массируем себя скребками, плавно потягиваемся и напитываемся нежностью."
+                                    fullWidth
+                                />
+                            </CardContent>
+                        </Card>
 
-                <section className="edit-project-card">
-                    <h2>Место</h2>
+                        <Card
+                            elevation={0}
+                            sx={{
+                                borderRadius: 4,
+                                border: 1,
+                                borderColor: 'divider',
+                            }}
+                        >
+                            <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+                                <Stack
+                                    direction={{ xs: 'column', sm: 'row' }}
+                                    alignItems={{ xs: 'stretch', sm: 'center' }}
+                                    justifyContent="space-between"
+                                    spacing={2}
+                                >
+                                    <Box>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Обложка проекта
+                                        </Typography>
+                                        <Typography fontWeight={800}>
+                                            Загрузите изображение для карточки
+                                        </Typography>
+                                    </Box>
 
-                    <div className="edit-project-place-actions">
-                        <Link to="/project/1/edit/place">Выбрать на карте</Link>
-                        <button type="button">Перекресток</button>
-                    </div>
+                                    <Button
+                                        component="label"
+                                        variant="contained"
+                                        startIcon={<CloudUploadIcon />}
+                                    >
+                                        Выбрать файл
+                                        <Box
+                                            component="input"
+                                            type="file"
+                                            accept="image/*"
+                                            sx={{
+                                                clip: 'rect(0 0 0 0)',
+                                                clipPath: 'inset(50%)',
+                                                height: 1,
+                                                overflow: 'hidden',
+                                                position: 'absolute',
+                                                bottom: 0,
+                                                left: 0,
+                                                whiteSpace: 'nowrap',
+                                                width: 1,
+                                            }}
+                                        />
+                                    </Button>
+                                </Stack>
+                            </CardContent>
+                        </Card>
 
-                    <div className="edit-project-note">
-                        <p>
-                            Стоимость аренды зала 1000 рублей в час. У них три зала и только в одном можно
-                            провести балет. Могут предоставить столы и стулья. Могут предоставить узкий гос
-                            интернет.
-                        </p>
-                        <p>
-                            Окончательное подтверждение времени необходимо производить по телефону:
-                            <strong> 89265463465</strong>.
-                        </p>
-                    </div>
-                </section>
+                        <Card
+                            elevation={0}
+                            sx={{
+                                borderRadius: 4,
+                                border: 1,
+                                borderColor: 'divider',
+                            }}
+                        >
+                            <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+                                <Stack spacing={2.5}>
+                                    <Typography component="h2" variant="h5" fontWeight={900}>
+                                        Место
+                                    </Typography>
 
-                <section className="edit-project-card">
-                    <h2>Подписчики</h2>
+                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                                        <Button
+                                            component={Link}
+                                            to="/project/1/edit/place"
+                                            variant="contained"
+                                            startIcon={<LocationOnIcon />}
+                                        >
+                                            Выбрать на карте
+                                        </Button>
 
-                    <div className="edit-project-subscribers">
-                        {subscribers.map((subscriber) => (
-                            <article className="edit-project-subscriber" key={subscriber.id}>
-                                <img src={subscriber.image} alt={subscriber.name} />
-                                <strong>{subscriber.name}</strong>
-                                <span>{subscriber.age}</span>
-                            </article>
-                        ))}
-                    </div>
-                </section>
+                                        <Button type="button" variant="outlined">
+                                            Перекресток
+                                        </Button>
+                                    </Stack>
 
-                <button className="edit-project-save" type="submit">
-                    Сохранить изменения
-                </button>
-            </form>
-        </main>
+                                    <Paper
+                                        elevation={0}
+                                        sx={{
+                                            p: 2.5,
+                                            borderRadius: 3,
+                                            bgcolor: 'grey.100',
+                                        }}
+                                    >
+                                        <Typography sx={{ mb: 1.5 }}>
+                                            Стоимость аренды зала 1000 рублей в час. У них три зала и только в одном
+                                            можно провести балет. Могут предоставить столы и стулья. Могут предоставить
+                                            узкий гос интернет.
+                                        </Typography>
+
+                                        <Typography>
+                                            Окончательное подтверждение времени необходимо производить по телефону:
+                                            <Typography component="strong" fontWeight={900}>
+                                                {' '}
+                                                89265463465
+                                            </Typography>
+                                            .
+                                        </Typography>
+                                    </Paper>
+                                </Stack>
+                            </CardContent>
+                        </Card>
+
+                        <Card
+                            elevation={0}
+                            sx={{
+                                borderRadius: 4,
+                                border: 1,
+                                borderColor: 'divider',
+                            }}
+                        >
+                            <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+                                <Stack spacing={2.5}>
+                                    <Typography component="h2" variant="h5" fontWeight={900}>
+                                        Подписчики
+                                    </Typography>
+
+                                    <Box
+                                        sx={{
+                                            display: 'grid',
+                                            gridTemplateColumns: {
+                                                xs: 'repeat(2, minmax(0, 1fr))',
+                                                sm: 'repeat(4, minmax(0, 1fr))',
+                                            },
+                                            gap: 2,
+                                        }}
+                                    >
+                                        {subscribers.map((subscriber) => (
+                                            <Paper
+                                                component="article"
+                                                elevation={0}
+                                                key={subscriber.id}
+                                                sx={{
+                                                    p: 2,
+                                                    textAlign: 'center',
+                                                    borderRadius: 3,
+                                                    bgcolor: 'grey.100',
+                                                }}
+                                            >
+                                                <Avatar
+                                                    src={subscriber.image}
+                                                    alt={subscriber.name}
+                                                    sx={{
+                                                        width: 64,
+                                                        height: 64,
+                                                        mx: 'auto',
+                                                        mb: 1,
+                                                    }}
+                                                />
+
+                                                <Typography fontWeight={800}>
+                                                    {subscriber.name}
+                                                </Typography>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    {subscriber.age}
+                                                </Typography>
+                                            </Paper>
+                                        ))}
+                                    </Box>
+                                </Stack>
+                            </CardContent>
+                        </Card>
+
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            size="large"
+                            startIcon={<SaveIcon />}
+                            sx={{
+                                alignSelf: { xs: 'stretch', sm: 'flex-end' },
+                                px: 4,
+                                py: 1.25,
+                                borderRadius: 3,
+                                fontWeight: 800,
+                            }}
+                        >
+                            Сохранить изменения
+                        </Button>
+                    </Stack>
+                </Box>
+            </Container>
+        </Box>
     )
 }
 

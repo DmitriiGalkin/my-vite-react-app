@@ -1,7 +1,33 @@
+import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import './ProjectPage.css'
+import {
+  Avatar,
+  AvatarGroup,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CardMedia,
+  Chip,
+  Container,
+  Divider,
+  Paper,
+  Stack,
+  Typography,
+} from '@mui/material'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import EditIcon from '@mui/icons-material/Edit'
+import EventIcon from '@mui/icons-material/Event'
+import PaymentsIcon from '@mui/icons-material/Payments'
+import ScheduleIcon from '@mui/icons-material/Schedule'
 import { meetings } from './mocks'
-import {useEffect} from "react";
+import type {Project} from "./types.ts";
+import {apiFetch} from "./api.ts";
+import {useQuery} from "@tanstack/react-query";
+
+async function fetchProject(): Promise<Project[]> {
+  return apiFetch<Project[]>('/project')
+}
 
 function ProjectPage() {
   const navigate = useNavigate()
@@ -13,99 +39,266 @@ function ProjectPage() {
     'https://randomuser.me/api/portraits/men/45.jpg',
   ]
 
+  const {
+    data: project
+  } = useQuery({
+    queryKey: ['project'],
+    queryFn: fetchProject,
+  })
+
+  console.log(project, 'project')
+
   useEffect(() => {
-    document.title = "Эпоксидная смола"
+    document.title = 'Эпоксидная смола'
   }, [])
 
   return (
-    <main className="project-page">
-      <button className="project-page-back" type="button" onClick={() => navigate(-1)}>
-        ← Назад
-      </button>
+      <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
+        <Container maxWidth="md" sx={{ py: { xs: 2, sm: 4 } }}>
+          <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              spacing={2}
+              sx={{ mb: 2 }}
+          >
+            <Button
+                type="button"
+                variant="text"
+                startIcon={<ArrowBackIcon />}
+                onClick={() => navigate(-1)}
+            >
+              Назад
+            </Button>
 
-      <Link className="project-page-edit" to="/project/1/edit">
-        Редактировать
-      </Link>
+            <Button
+                component={Link}
+                to="/project/1/edit"
+                variant="outlined"
+                startIcon={<EditIcon />}
+            >
+              Редактировать
+            </Button>
+          </Stack>
 
-      <img
-        className="project-page-image"
-        src="https://thumbs.dreamstime.com/z/none-165853060.jpg"
-        alt="Эпоксидная смола"
-      />
+          <Card
+              elevation={0}
+              sx={{
+                overflow: 'hidden',
+                borderRadius: 4,
+                border: 1,
+                borderColor: 'divider',
+              }}
+          >
+            <CardMedia
+                component="img"
+                height="360"
+                image="https://thumbs.dreamstime.com/z/none-165853060.jpg"
+                alt="Эпоксидная смола"
+                sx={{
+                  objectFit: 'cover',
+                  height: {
+                    xs: 220,
+                    sm: 360,
+                  },
+                }}
+            />
 
-      <section className="project-page-content">
-        <h1>Эпоксидная смола</h1>
+            <CardContent sx={{ p: { xs: 2.5, sm: 4 } }}>
+              <Stack spacing={3}>
+                <Box>
+                  <Typography
+                      component="h1"
+                      variant="h3"
+                      fontWeight={900}
+                      sx={{
+                        fontSize: {
+                          xs: '2rem',
+                          sm: '3rem',
+                        },
+                      }}
+                  >
+                    Эпоксидная смола
+                  </Typography>
 
-        <p className="project-page-description">
-          Изготовление изделий из эпоксидной смолы, изучение различных техник заливки, форм,
-          цветов, текстур.
-        </p>
+                  <Typography
+                      color="text.secondary"
+                      sx={{
+                        mt: 1.5,
+                        fontSize: {
+                          xs: '1rem',
+                          sm: '1.1rem',
+                        },
+                        lineHeight: 1.7,
+                      }}
+                  >
+                    Изготовление изделий из эпоксидной смолы, изучение различных техник заливки,
+                    форм, цветов, текстур.
+                  </Typography>
+                </Box>
 
-        <div className="participants">
-          <div className="participants-avatars">
-            {userImages.map((participant) => (
-              <img src={participant} alt="Участник" key={participant} />
-            ))}
-            <span className="participants-more">+5</span>
-          </div>
-        </div>
+                <Stack direction="row" alignItems="center" spacing={2}>
+                  <AvatarGroup max={5}>
+                    {userImages.map((participant) => (
+                        <Avatar src={participant} alt="Участник" key={participant} />
+                    ))}
+                  </AvatarGroup>
 
-        <div className="project-info">
-          <div className="project-info-item">
-            <span>Место</span>
-            <strong>Лесной дом</strong>
-          </div>
-          <div className="project-info-item">
-            <span>Возраст</span>
-            <strong>5-7 лет</strong>
-          </div>
-          <div className="project-info-item">
-            <span>Организатор</span>
-            <strong>Галкин Дмитрий</strong>
-          </div>
-        </div>
+                  <Chip label="+5 участников" color="primary" variant="outlined" />
+                </Stack>
 
-        <section className="schedule">
-          <h2>Расписание</h2>
+                <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: {
+                        xs: '1fr',
+                        sm: 'repeat(3, minmax(0, 1fr))',
+                      },
+                      gap: 2,
+                    }}
+                >
+                  <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2,
+                        borderRadius: 3,
+                        bgcolor: 'grey.100',
+                      }}
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      Место
+                    </Typography>
+                    <Typography fontWeight={800}>
+                      Лесной дом
+                    </Typography>
+                  </Paper>
 
-          <div className="schedule-list">
-            {meetings
-                .filter((meeting) => !meeting.deletedAt)
-                .map((meeting) => {
-                  const startedAt = new Date(meeting.startedAt)
+                  <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2,
+                        borderRadius: 3,
+                        bgcolor: 'grey.100',
+                      }}
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      Возраст
+                    </Typography>
+                    <Typography fontWeight={800}>
+                      5-7 лет
+                    </Typography>
+                  </Paper>
 
-                  return (
-                      <article className="schedule-card" key={meeting.id}>
-                        <div>
-                          <span className="schedule-label">Дата</span>
-                          <strong>
-                            {startedAt.toLocaleDateString('ru-RU', {
-                              day: 'numeric',
-                              month: 'long',
-                            })}
-                          </strong>
-                        </div>
-                        <div>
-                          <span className="schedule-label">Время</span>
-                          <strong>
-                            {startedAt.toLocaleTimeString('ru-RU', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </strong>
-                        </div>
-                        <div>
-                          <span className="schedule-label">Цена</span>
-                          <strong>{meeting.price ? `${meeting.price} ₽` : 'Бесплатно'}</strong>
-                        </div>
-                        <button type="button">Участвовать</button>
-                      </article>
-                  )
-                })}
-          </div>
-        </section>
-      </section>
-    </main>
+                  <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2,
+                        borderRadius: 3,
+                        bgcolor: 'grey.100',
+                      }}
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      Организатор
+                    </Typography>
+                    <Typography fontWeight={800}>
+                      Галкин Дмитрий
+                    </Typography>
+                  </Paper>
+                </Box>
+
+                <Divider />
+
+                <Box component="section">
+                  <Typography component="h2" variant="h4" fontWeight={900} sx={{ mb: 2.5 }}>
+                    Расписание
+                  </Typography>
+
+                  <Stack spacing={2}>
+                    {meetings
+                        .filter((meeting) => !meeting.deletedAt)
+                        .map((meeting) => {
+                          const startedAt = new Date(meeting.startedAt)
+
+                          return (
+                              <Paper
+                                  component="article"
+                                  elevation={0}
+                                  key={meeting.id}
+                                  sx={{
+                                    p: 2,
+                                    borderRadius: 3,
+                                    border: 1,
+                                    borderColor: 'divider',
+                                  }}
+                              >
+                                <Stack
+                                    direction={{ xs: 'column', md: 'row' }}
+                                    alignItems={{ xs: 'stretch', md: 'center' }}
+                                    justifyContent="space-between"
+                                    spacing={2}
+                                >
+                                  <Stack
+                                      direction={{ xs: 'column', sm: 'row' }}
+                                      spacing={2}
+                                      sx={{ flexGrow: 1 }}
+                                  >
+                                    <Stack direction="row" alignItems="center" spacing={1.25} sx={{ minWidth: 140 }}>
+                                      <EventIcon color="primary" />
+                                      <Box>
+                                        <Typography variant="body2" color="text.secondary">
+                                          Дата
+                                        </Typography>
+                                        <Typography fontWeight={800}>
+                                          {startedAt.toLocaleDateString('ru-RU', {
+                                            day: 'numeric',
+                                            month: 'long',
+                                          })}
+                                        </Typography>
+                                      </Box>
+                                    </Stack>
+
+                                    <Stack direction="row" alignItems="center" spacing={1.25} sx={{ minWidth: 120 }}>
+                                      <ScheduleIcon color="primary" />
+                                      <Box>
+                                        <Typography variant="body2" color="text.secondary">
+                                          Время
+                                        </Typography>
+                                        <Typography fontWeight={800}>
+                                          {startedAt.toLocaleTimeString('ru-RU', {
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                          })}
+                                        </Typography>
+                                      </Box>
+                                    </Stack>
+
+                                    <Stack direction="row" alignItems="center" spacing={1.25} sx={{ minWidth: 120 }}>
+                                      <PaymentsIcon color="primary" />
+                                      <Box>
+                                        <Typography variant="body2" color="text.secondary">
+                                          Цена
+                                        </Typography>
+                                        <Typography fontWeight={800}>
+                                          {meeting.price ? `${meeting.price} ₽` : 'Бесплатно'}
+                                        </Typography>
+                                      </Box>
+                                    </Stack>
+                                  </Stack>
+
+                                  <Button variant="contained" size="large">
+                                    Участвовать
+                                  </Button>
+                                </Stack>
+                              </Paper>
+                          )
+                        })}
+                  </Stack>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Container>
+      </Box>
   )
 }
 

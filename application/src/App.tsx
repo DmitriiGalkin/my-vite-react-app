@@ -1,12 +1,42 @@
-import {useEffect, useState} from 'react'
+import { useEffect, useState } from 'react'
 import { Link, Route, Routes } from 'react-router-dom'
+import {
+    Alert,
+    AppBar,
+    Avatar,
+    Box,
+    Button,
+    Card,
+    CardActions,
+    CardContent,
+    CardMedia,
+    CircularProgress,
+    Container,
+    Drawer,
+    IconButton,
+    List,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+    Paper,
+    Stack,
+    Toolbar,
+    Typography,
+} from '@mui/material'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
+import CloseIcon from '@mui/icons-material/Close'
+import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder'
+import FolderIcon from '@mui/icons-material/Folder'
+import LightbulbIcon from '@mui/icons-material/Lightbulb'
+import AddIcon from '@mui/icons-material/Add'
 import ProjectPage from './ProjectPage'
 import EditProjectPage from './EditProjectPage'
 import PlaceSelectPage from './PlaceSelectPage'
 import './App.css'
 import type { Project } from './types'
 import { useQuery } from '@tanstack/react-query'
-import {apiFetch} from "./api.ts";
+import { apiFetch } from './api.ts'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000'
 const ACCESS_TOKEN_STORAGE_KEY = 'access_token'
@@ -40,25 +70,15 @@ const authStrategies = [
         href: `${API_URL}/login/google`,
         icon: 'G',
     },
-    // {
-    //     title: 'Mail.ru',
-    //     href: `${API_URL}/login/mailru`,
-    //     icon: '@',
-    // },
     {
         title: 'Yandex',
         href: `${API_URL}/login/yandex`,
         icon: 'Я',
     },
-    // {
-    //     title: 'VK',
-    //     href: `${API_URL}/login/vkontakte`,
-    //     icon: 'VK',
-    // },
 ]
 
 function HomePage() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
+    const [isMenuOpen, setIsMenuOpen] = useState(false)
     const [accessToken, setAccessToken] = useState<string | null>(null)
 
     useEffect(() => {
@@ -75,176 +95,308 @@ function HomePage() {
         enabled: accessToken !== null,
     })
 
-    console.log(projects,'projects')
+    return (
+        <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
+            <AppBar
+                position="sticky"
+                color="inherit"
+                elevation={1}
+                sx={{ borderBottom: 1, borderColor: 'divider' }}
+            >
+                <Toolbar sx={{ gap: 2 }}>
 
-  return (
-    <>
-      <header className="home-header">
-        <button
-          className="home-header-menu-button"
-          type="button"
-          aria-label={isMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
-          aria-expanded={isMenuOpen}
-          onClick={() => setIsMenuOpen((isMenuOpen) => !isMenuOpen)}
-        >
-          {isMenuOpen ? '×' : '☰'}
-        </button>
-
-        <div className="home-header-user">
-          <img
-              src="https://i.pravatar.cc/120?img=5"
-              alt="Настя Галкина"
-          />
-          <span>Настя Галкина</span>
-        </div>
-
-        <div className="home-header-ai-actions" aria-label="Общение с АИ">
-          <button type="button" aria-label="Чат с АИ">
-            🤖
-          </button>
-          <button type="button" aria-label="Голосовой помощник">
-            🎙️
-          </button>
-          <button type="button" aria-label="Идеи от АИ">
-            ✨
-          </button>
-        </div>
-      </header>
-
-        <section className="auth-section" aria-labelledby="auth-section-title">
-            <div className="auth-section-content">
-                <div>
-                    <h2 id="auth-section-title">
-                        {accessToken ? 'Вы авторизованы' : 'Войти в аккаунт'}
-                    </h2>
-                    <p>
-                        {accessToken ? 'Теперь доступны защищённые разделы' : 'Выберите удобный способ авторизации'}
-                    </p>
-                </div>
-
-                {accessToken ? (
-                    <button
-                        className="auth-strategy"
-                        type="button"
-                        onClick={() => {
-                            localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
-                            setAccessToken(null)
-                        }}
+                    <Stack direction="row" alignItems="center" spacing={1.5} sx={{ flexGrow: 1 }}
+                           onClick={() => setIsMenuOpen((currentValue) => !currentValue)}
                     >
-                        <span className="auth-strategy-icon">×</span>
-                        <span>Выйти</span>
-                    </button>
-                ) : (
-                    <div className="auth-strategies">
-                        {authStrategies.map((strategy) => (
-                            <a
-                                className="auth-strategy"
-                                href={strategy.href}
-                                key={strategy.title}
+                        <Avatar
+                            src="https://i.pravatar.cc/120?img=5"
+                            alt="Настя Галкина"
+                        />
+                        <Typography variant="subtitle1" fontWeight={700}>
+                            Настя Галкина
+                        </Typography>
+                    </Stack>
+
+                    <IconButton color="primary" aria-label="Идеи от АИ">
+                        <AutoAwesomeIcon />
+                    </IconButton>
+                </Toolbar>
+            </AppBar>
+
+            <Drawer
+                open={isMenuOpen}
+                onClose={() => setIsMenuOpen(false)}
+                PaperProps={{
+                    sx: {
+                        width: 320,
+                        maxWidth: '85vw',
+                    },
+                }}
+            >
+                <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <Stack spacing={3}>
+
+                        <Stack direction="row" alignItems="center" spacing={2}>
+                            <Avatar
+                                src="https://i.pravatar.cc/120?img=5"
+                                alt="Настя Галкина"
+                                sx={{ width: 56, height: 56 }}
+                            />
+                            <Box>
+                                <Typography fontWeight={800}>Настя Галкина</Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    10 лет
+                                </Typography>
+                            </Box>
+                        </Stack>
+
+                        <List disablePadding>
+                            <ListItemButton
+                                sx={{
+                                    mb: 1,
+                                    borderRadius: 2,
+                                    bgcolor: 'primary.main',
+                                    color: 'primary.contrastText',
+                                    '&:hover': {
+                                        bgcolor: 'primary.dark',
+                                    },
+                                }}
                             >
-                                <span className="auth-strategy-icon">{strategy.icon}</span>
-                                <span>{strategy.title}</span>
-                            </a>
-                        ))}
-                    </div>
-                )}
-            </div>
-        </section>
-      {isMenuOpen && (
-        <section className="home-menu">
-          <header className="home-menu-header">
-            <div className="home-menu-logo">Menu</div>
+                                <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
+                                    <AddIcon />
+                                </ListItemIcon>
+                                <ListItemText primary="Новая идея" />
+                            </ListItemButton>
 
-            <div className="home-menu-profile">
-              <img
-                  src="https://i.pravatar.cc/120?img=5"
-                  alt="Настя Галкина"
-              />
-              <div>
-                <strong>Настя Галкина</strong>
-                <span>10 лет</span>
-              </div>
-            </div>
-          </header>
+                            <ListItemButton
+                                component={Link}
+                                to="/"
+                                onClick={() => setIsMenuOpen(false)}
+                                sx={{ borderRadius: 2 }}
+                            >
+                                <ListItemIcon sx={{ minWidth: 40 }}>
+                                    <LightbulbIcon />
+                                </ListItemIcon>
+                                <ListItemText primary="Мои проекты и идеи" />
+                            </ListItemButton>
 
-          <div className="home-menu-list">
-            <button className="home-menu-item home-menu-item-primary" type="button">
-              <span className="home-menu-icon">+</span>
-              <span>Новая идея</span>
-            </button>
+                            <ListItemButton
+                                component={Link}
+                                to="/"
+                                onClick={() => setIsMenuOpen(false)}
+                                sx={{ borderRadius: 2 }}
+                            >
+                                <ListItemIcon sx={{ minWidth: 40 }}>
+                                    <CalendarMonthIcon />
+                                </ListItemIcon>
+                                <ListItemText primary="Календарь" />
+                            </ListItemButton>
+                        </List>
+                    </Stack>
 
-            <Link className="home-menu-item" to="/" onClick={() => setIsMenuOpen(false)}>
-              <span className="home-menu-icon">💡</span>
-              <span>Мои проекты и идеи</span>
-            </Link>
+                    <Box sx={{ mt: 'auto' }}>
+                        <List disablePadding>
+                            <ListItemButton
+                                sx={{
+                                    mb: 1,
+                                    borderRadius: 2,
+                                    bgcolor: 'primary.main',
+                                    color: 'primary.contrastText',
+                                    '&:hover': {
+                                        bgcolor: 'primary.dark',
+                                    },
+                                }}
+                            >
+                                <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
+                                    <CreateNewFolderIcon />
+                                </ListItemIcon>
+                                <ListItemText primary="Новый проект" />
+                            </ListItemButton>
 
-            <Link className="home-menu-item" to="/" onClick={() => setIsMenuOpen(false)}>
-              <span className="home-menu-icon">📅</span>
-              <span>Календарь</span>
-            </Link>
-          </div>
+                            <ListItemButton
+                                component={Link}
+                                to="/"
+                                onClick={() => setIsMenuOpen(false)}
+                                sx={{ borderRadius: 2 }}
+                            >
+                                <ListItemIcon sx={{ minWidth: 40 }}>
+                                    <FolderIcon />
+                                </ListItemIcon>
+                                <ListItemText primary="Мои проекты" />
+                            </ListItemButton>
+                        </List>
+                    </Box>
+                </Box>
+            </Drawer>
 
-          <div className="home-menu-footer">
-            <button className="home-menu-item home-menu-item-primary" type="button">
-              <span className="home-menu-icon">+</span>
-              <span>Новый проект</span>
-            </button>
+            <Container maxWidth="lg" sx={{ py: 4 }}>
+                <Paper
+                    component="section"
+                    elevation={0}
+                    sx={{
+                        p: { xs: 2.5, sm: 3 },
+                        mb: 4,
+                        borderRadius: 4,
+                        border: 1,
+                        borderColor: 'divider',
+                    }}
+                    aria-labelledby="auth-section-title"
+                >
+                    <Stack
+                        direction={{ xs: 'column', sm: 'row' }}
+                        alignItems={{ xs: 'stretch', sm: 'center' }}
+                        justifyContent="space-between"
+                        spacing={2}
+                    >
+                        <Box>
+                            <Typography id="auth-section-title" variant="h5" fontWeight={800}>
+                                {accessToken ? 'Вы авторизованы' : 'Войти в аккаунт'}
+                            </Typography>
+                            <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+                                {accessToken
+                                    ? 'Теперь доступны защищённые разделы'
+                                    : 'Выберите удобный способ авторизации'}
+                            </Typography>
+                        </Box>
 
-            <Link className="home-menu-item" to="/" onClick={() => setIsMenuOpen(false)}>
-              <span className="home-menu-icon">📁</span>
-              <span>Мои проекты</span>
-            </Link>
-          </div>
-        </section>
-      )}
+                        {accessToken ? (
+                            <Button
+                                variant="outlined"
+                                color="error"
+                                startIcon={<CloseIcon />}
+                                onClick={() => {
+                                    localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY)
+                                    setAccessToken(null)
+                                }}
+                            >
+                                Выйти
+                            </Button>
+                        ) : (
+                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                                {authStrategies.map((strategy) => (
+                                    <Button
+                                        component="a"
+                                        variant="contained"
+                                        href={strategy.href}
+                                        key={strategy.title}
+                                        sx={{ minWidth: 120 }}
+                                    >
+                                        <Box component="span" sx={{ mr: 1, fontWeight: 900 }}>
+                                            {strategy.icon}
+                                        </Box>
+                                        {strategy.title}
+                                    </Button>
+                                ))}
+                            </Stack>
+                        )}
+                    </Stack>
+                </Paper>
 
-      <section className="projects-section">
-        <h2>Проекты</h2>
+                <Box component="section">
+                    <Typography variant="h4" fontWeight={900} sx={{ mb: 3 }}>
+                        Проекты
+                    </Typography>
 
-          {isProjectsLoading && <p>Загрузка проектов...</p>}
-          {isProjectsError && <p>Не удалось загрузить проекты.</p>}
+                    {isProjectsLoading && (
+                        <Stack direction="row" spacing={2} alignItems="center">
+                            <CircularProgress size={24} />
+                            <Typography>Загрузка проектов...</Typography>
+                        </Stack>
+                    )}
 
-          {!isProjectsLoading && !isProjectsError && (
-          <div className="projects-grid">
-          {projects.map((project) => (
-              <article className="project-card" key={project.id}>
-                <img src={project.image || ''} alt={project.title || ''} />
-                <div className="project-card-content">
-                  <h3>{project.title} 2</h3>
-                  <p>{project.description}</p>
-                  <Link to={`/project/${project.id}`}>Подробнее</Link>
-                </div>
-              </article>
-          ))}
-        </div>
-      )}
-      </section>
-    </>
-  )
+                    {isProjectsError && (
+                        <Alert severity="error">
+                            Не удалось загрузить проекты.
+                        </Alert>
+                    )}
+
+                    {!isProjectsLoading && !isProjectsError && (
+                        <Box
+                            sx={{
+                                display: 'grid',
+                                gridTemplateColumns: {
+                                    xs: '1fr',
+                                    sm: 'repeat(2, minmax(0, 1fr))',
+                                    md: 'repeat(3, minmax(0, 1fr))',
+                                },
+                                gap: 3,
+                            }}
+                        >
+                            {projects.map((project) => (
+                                <Card
+                                    component="article"
+                                    key={project.id}
+                                    elevation={0}
+                                    sx={{
+                                        height: '100%',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        borderRadius: 4,
+                                        border: 1,
+                                        borderColor: 'divider',
+                                        overflow: 'hidden',
+                                    }}
+                                >
+                                    <CardMedia
+                                        component="img"
+                                        height="180"
+                                        image={project.image || 'https://placehold.co/600x400?text=Project'}
+                                        alt={project.title || 'Проект'}
+                                        sx={{ objectFit: 'cover' }}
+                                    />
+
+                                    <CardContent sx={{ flexGrow: 1 }}>
+                                        <Typography variant="h6" fontWeight={800} gutterBottom>
+                                            {project.title}
+                                        </Typography>
+                                        <Typography color="text.secondary">
+                                            {project.description}
+                                        </Typography>
+                                    </CardContent>
+
+                                    <CardActions sx={{ px: 2, pb: 2 }}>
+                                        <Button
+                                            component={Link}
+                                            to={`/project/${project.id}`}
+                                            variant="contained"
+                                            fullWidth
+                                        >
+                                            Подробнее
+                                        </Button>
+                                    </CardActions>
+                                </Card>
+                            ))}
+                        </Box>
+                    )}
+                </Box>
+            </Container>
+        </Box>
+    )
 }
 
-
 function NotFoundPage() {
-  return (
-      <section id="center">
-        <h1 className="text-3xl font-bold text-red-600">404</h1>
-        <p>Страница не найдена.</p>
-      </section>
-  )
+    return (
+        <Container maxWidth="sm" sx={{ py: 8, textAlign: 'center' }}>
+            <Typography variant="h2" fontWeight={900} color="error">
+                404
+            </Typography>
+            <Typography color="text.secondary">
+                Страница не найдена.
+            </Typography>
+        </Container>
+    )
 }
 
 function App() {
-  return (
-      <>
+    return (
         <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/project/1" element={<ProjectPage />} />
-          <Route path="/project/1/edit" element={<EditProjectPage/>} />
-          <Route path="/project/1/edit/place" element={<PlaceSelectPage />} />
-          <Route path="*" element={<NotFoundPage />} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/project/:id" element={<ProjectPage />} />
+            <Route path="/project/:id/edit" element={<EditProjectPage />} />
+            <Route path="/project/:id/edit/place" element={<PlaceSelectPage />} />
+            <Route path="*" element={<NotFoundPage />} />
         </Routes>
-      </>
-  )
+    )
 }
 
 export default App

@@ -20,8 +20,6 @@ function PlaceSelectPage() {
 
   const {
     data: places = [],
-    isLoading: isPlacesLoading,
-    isError: isPlacesError,
   } = useQuery({
     queryKey: ['places'],
     queryFn: fetchPlaces,

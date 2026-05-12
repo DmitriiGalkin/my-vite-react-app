@@ -247,7 +247,7 @@ function ProjectPage() {
                 </Typography>
 
                 <Stack spacing={2}>
-                  {project.meets
+                  {project?.meets
                     .filter(meeting => !meeting.deletedAt)
                     .map(meeting => {
                       const startedAt = new Date(meeting.startedAt);

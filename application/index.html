@@ -9,7 +9,10 @@
   <meta name="description" content="<!--app-description-->" />
 
   <link rel="manifest" href="/manifest.webmanifest" />
-  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Quantum" />
+  <link rel="apple-touch-icon" href="/icons/192.png" />
 
   <meta property="og:title" content="<!--app-og-title-->" />
   <meta property="og:description" content="<!--app-og-description-->" />
@@ -20,6 +23,5 @@
 </head>
 <body>
 <div id="root"><!--ssr-outlet--></div>
-<script type="module" src="/src/main.tsx"></script>
 </body>
 </html>

@@ -110,10 +110,17 @@ pipeline {
                   sleep 5
 
                   docker ps --filter "name=$CONTAINER_NAME"
+
+                  echo "Container logs:"
                   docker logs "$CONTAINER_NAME" --tail 100
 
-                  curl -sSf --resolve q3-dev.ru:443:127.0.0.1 "https://q3-dev.ru" | head -n 20
-                '''
+                    echo "Healthcheck:"
+                      if ! curl -sSf --resolve q3-dev.ru:443:127.0.0.1 "https://q3-dev.ru" | head -n 20; then
+                        echo "Healthcheck failed. Container logs:"
+                        docker logs "$CONTAINER_NAME" --tail 300 || true
+                        exit 1
+                      fi
+                      '''
             }
         }
     }

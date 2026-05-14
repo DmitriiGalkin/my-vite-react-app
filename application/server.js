@@ -11,10 +11,16 @@ const __dirname = path.dirname(__filename);
 async function createServer() {
   const app = express();
 
+  const isProd = true // process.env.NODE_ENV === 'production'
+  ;
   // Создаем Vite сервер в режиме middleware
   const vite = await createViteServer({
     root: __dirname,
-    server: { middlewareMode: true },
+    middlewareMode: isProd ? 'ssr' : true, // В проде используем ssr, в деве — middleware
+    https: isProd ? undefined : { // В деве Vite сам поднимает HMR сервер с https, если нужно
+      key: fs.readFileSync('path/to/key.pem'),
+      cert: fs.readFileSync('path/to/cert.pem')
+    },
     appType: 'custom',
   });
 

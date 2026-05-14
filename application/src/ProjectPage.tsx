@@ -37,7 +37,7 @@ interface ExtendedProject extends Project {
   participations?: {
     id: string;
     image: string;
-  }[];Z
+  }[];
 }
 
 async function fetchProject(id: string): Promise<ExtendedProject> {
@@ -173,7 +173,7 @@ function ProjectPage() {
 
               <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
                 <AvatarGroup max={5}>
-                  {project?.participations.map(participant => (
+                  {(project?.participations || []).map(participant => (
                     <Avatar src={participant.image} alt="Участник" key={participant.id} />
                   ))}
                 </AvatarGroup>

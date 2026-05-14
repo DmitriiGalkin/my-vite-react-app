@@ -105,14 +105,14 @@ pipeline {
                       -v "/etc/ssl/quantum:/run/secrets/ssl:ro" \
                       -w /workspace \
                       "$NODE_IMAGE" \
-                      sh -lc "npm install -g pm2 && pm2 start backend/src/index.js --name $BACKEND_NAME && pm2 start application/server.js --name $APPLICATION_NAME --no-daemon"
+                          sh -lc "npm install -g pm2 && pm2-runtime ecosystem.config.cjs"
 
                   sleep 5
 
                   docker ps --filter "name=$CONTAINER_NAME"
                   docker logs "$CONTAINER_NAME" --tail 100
 
-                  curl -sSf "http://127.0.0.1:$HOST_PORT" | head -n 20
+                  curl -sSf --resolve q3-dev.ru:443:127.0.0.1 "https://q3-dev.ru" | head -n 20
                 '''
             }
         }

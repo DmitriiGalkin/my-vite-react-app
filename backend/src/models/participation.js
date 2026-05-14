@@ -30,12 +30,6 @@ Participation.findById = function(id, result){
     });
 };
 
-Participation.findByIdeaId = function(id, result){
-    dbConn.query("SELECT * FROM participation WHERE ideaId = ?", [id], function (err, res) {
-        result(null, res.length ? res[0] : undefined);
-    });
-};
-
 // Участия проекту
 Participation.findByProjectId = function (id, result) {
     dbConn.query('SELECT * FROM participation WHERE projectId = ? ', id, function (err, res) {

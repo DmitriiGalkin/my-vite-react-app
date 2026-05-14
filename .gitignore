@@ -47,3 +47,7 @@ coverage/
 
 # TypeScript
 *.tsbuildinfo
+
+*.crt
+*.key
+*.ppk

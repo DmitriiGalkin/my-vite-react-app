@@ -9,7 +9,7 @@ pipeline {
     }
 
     environment {
-        CONTAINER_NAME = 'quantum'
+        CONTAINER_NAME = 'quantum-application'
         APPLICATION_NAME = 'application'
         BACKEND_NAME = 'backend'
         NODE_IMAGE = 'node:latest'

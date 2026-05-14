@@ -34,6 +34,10 @@ interface ExtendedProject extends Project {
     title: string;
   };
   meets?: Meet[];
+  participations?: {
+    id: string;
+    image: string;
+  }[];Z
 }
 
 async function fetchProject(id: string): Promise<ExtendedProject> {
@@ -53,13 +57,6 @@ function ProjectPage() {
     queryFn: () => fetchProject(id as string),
     enabled: Boolean(id),
   });
-
-  const userImages = [
-    'https://randomuser.me/api/portraits/women/12.jpg',
-    'https://randomuser.me/api/portraits/men/32.jpg',
-    'https://randomuser.me/api/portraits/women/65.jpg',
-    'https://randomuser.me/api/portraits/men/45.jpg',
-  ];
 
   useEffect(() => {
     document.title = project?.title || 'Проект';
@@ -176,8 +173,8 @@ function ProjectPage() {
 
               <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
                 <AvatarGroup max={5}>
-                  {userImages.map(participant => (
-                    <Avatar src={participant} alt="Участник" key={participant} />
+                  {project?.participations.map(participant => (
+                    <Avatar src={participant.image} alt="Участник" key={participant.id} />
                   ))}
                 </AvatarGroup>
 

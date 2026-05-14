@@ -32,9 +32,11 @@ User.delete = function(id, result){
     });
 };
 
+
 // Участник
 User.findById = function (id, result) {
     dbConn.query("SELECT * from `user` where id = ?", id, function (err, res) {
+      console.log(err, res, 'err, res')
         result(null, res?.length ? res[0] : undefined);
     });
 };

@@ -23,9 +23,9 @@ import {
   Toolbar,
   Typography,
 } from '@mui/material';
+import KeyIcon from '@mui/icons-material/Key';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
-import CloseIcon from '@mui/icons-material/Close';
 import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
 import FolderIcon from '@mui/icons-material/Folder';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
@@ -60,8 +60,9 @@ function saveAccessTokenFromUrl() {
   return accessToken;
 }
 
-async function fetchProjects(): Promise<Project[]> {
-  return apiFetch<Project[]>('/projects');
+type Type = 'self' | 'ideas' | 'projects' | null;
+async function fetchProjects(type: Type, userId: number): Promise<Project[]> {
+  return apiFetch<Project[]>('/projects' + '?variant=' + type + '&userId=' + userId);
 }
 
 const authStrategies = [
@@ -80,6 +81,9 @@ const authStrategies = [
 function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [type, setType] = useState<Type>(
+    null,
+  );
 
   const initialAccessToken = saveAccessTokenFromUrl();
 
@@ -96,8 +100,8 @@ function HomePage() {
     isLoading: isProjectsLoading,
     isError: isProjectsError,
   } = useQuery({
-    queryKey: ['projects'],
-    queryFn: fetchProjects,
+    queryKey: ['projects', type],
+    queryFn: () => fetchProjects(type, 1),
     //enabled: accessToken !== null,
   });
 
@@ -107,181 +111,206 @@ function HomePage() {
         position="sticky"
         color="inherit"
         elevation={1}
-        sx={{ borderBottom: 1, borderColor: 'divider' }}
+        sx={{
+          borderBottom: 1,
+          borderColor: 'divider',
+          backgroundImage: 'linear-gradient(to bottom, #FFB628, #FF8F28)',
+        }}
       >
         <Toolbar sx={{ gap: 2 }}>
-          <Stack
-            direction="row"
-            spacing={1.5}
-            sx={{
-              flexGrow: 1,
-              alignItems: 'center',
-              cursor: 'pointer',
-            }}
-            onClick={() => setIsMenuOpen(currentValue => !currentValue)}
-          >
-            <Avatar src="https://i.pravatar.cc/120?img=5" alt="Настя Галкина" />
-            <Typography sx={{ fontWeight: 700 }} component="span" variant="subtitle1">
-              Настя Галкина
-            </Typography>
-          </Stack>
+          {accessToken ? (
+            <Stack
+              direction="row"
+              spacing={1.5}
+              sx={{
+                flexGrow: 1,
+                alignItems: 'center',
+                cursor: 'pointer',
+                color: 'white',
+              }}
+              onClick={() => setIsMenuOpen(currentValue => !currentValue)}
+            >
+              <Avatar
+                src="https://i.pravatar.cc/120?img=5"
+                alt="Настя Галкина"
+                sx={{ border: '2px solid white' }}
+              />
+              <Typography sx={{ fontWeight: 700 }} component="span" variant="subtitle1">
+                Настя Галкина
+              </Typography>
+            </Stack>
+          ) : (
+            <div>
+              <Typography sx={{ fontWeight: 700 }} component="span" variant="subtitle1">
+                Quantum
+              </Typography>
+            </div>
+          )}
 
-          <IconButton color="primary" aria-label="Идеи от АИ">
+          <IconButton color="primary" aria-label="Идеи от АИ" sx={{ color: 'white' }}>
             <AutoAwesomeIcon />
           </IconButton>
         </Toolbar>
       </AppBar>
 
-      <Drawer open={isMenuOpen} onClose={() => setIsMenuOpen(false)}>
-        <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Stack spacing={3}>
-            <Stack
-              direction="row"
-              spacing={2}
-              sx={{
-                alignItems: 'center',
-              }}
-            >
-              <Avatar
-                src="https://i.pravatar.cc/120?img=5"
-                alt="Настя Галкина"
-                sx={{ width: 56, height: 56 }}
-              />
-              <Box>
-                <Typography sx={{ fontWeight: 800 }}>Настя Галкина</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  10 лет
-                </Typography>
-              </Box>
+      {accessToken && (
+        <Drawer open={isMenuOpen} onClose={() => setIsMenuOpen(false)}>
+          <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Stack spacing={3}>
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  alignItems: 'center',
+                }}
+              >
+                <Avatar
+                  src="https://i.pravatar.cc/120?img=5"
+                  alt="Настя Галкина"
+                  sx={{ width: 56, height: 56 }}
+                />
+                <Box>
+                  <Typography sx={{ fontWeight: 800 }}>Настя Галкина</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    10 лет
+                  </Typography>
+                </Box>
+              </Stack>
+
+              <List disablePadding>
+                <ListItemButton
+                  sx={{
+                    mb: 1,
+                    borderRadius: 2,
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
+                    '&:hover': {
+                      bgcolor: 'primary.dark',
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
+                    <AddIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Новая идея" />
+                </ListItemButton>
+
+                <ListItemButton
+                  component={Link}
+                  to="/"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setType('self');
+                  }}
+                  sx={{ borderRadius: 2 }}
+                >
+                  <ListItemIcon sx={{ minWidth: 40 }}>
+                    <LightbulbIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Мои проекты и идеи" />
+                </ListItemButton>
+
+                <ListItemButton
+                  component={Link}
+                  to="/"
+                  onClick={() => setIsMenuOpen(false)}
+                  sx={{ borderRadius: 2 }}
+                >
+                  <ListItemIcon sx={{ minWidth: 40 }}>
+                    <CalendarMonthIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Календарь" />
+                </ListItemButton>
+              </List>
             </Stack>
 
-            <List disablePadding>
-              <ListItemButton
-                sx={{
-                  mb: 1,
-                  borderRadius: 2,
-                  bgcolor: 'primary.main',
-                  color: 'primary.contrastText',
-                  '&:hover': {
-                    bgcolor: 'primary.dark',
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
-                  <AddIcon />
-                </ListItemIcon>
-                <ListItemText primary="Новая идея" />
-              </ListItemButton>
+            <Box sx={{ mt: 'auto' }}>
+              <List disablePadding>
+                <ListItemButton
+                  sx={{
+                    mb: 1,
+                    borderRadius: 2,
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
+                    '&:hover': {
+                      bgcolor: 'primary.dark',
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
+                    <CreateNewFolderIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Новый проект" />
+                </ListItemButton>
 
-              <ListItemButton
-                component={Link}
-                to="/"
-                onClick={() => setIsMenuOpen(false)}
-                sx={{ borderRadius: 2 }}
-              >
-                <ListItemIcon sx={{ minWidth: 40 }}>
-                  <LightbulbIcon />
-                </ListItemIcon>
-                <ListItemText primary="Мои проекты и идеи" />
-              </ListItemButton>
+                <ListItemButton
+                  component={Link}
+                  to="/"
+                  onClick={() => setIsMenuOpen(false)}
+                  sx={{ borderRadius: 2 }}
+                >
+                  <ListItemIcon sx={{ minWidth: 40 }}>
+                    <FolderIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Мои проекты" />
+                </ListItemButton>
 
-              <ListItemButton
-                component={Link}
-                to="/"
-                onClick={() => setIsMenuOpen(false)}
-                sx={{ borderRadius: 2 }}
-              >
-                <ListItemIcon sx={{ minWidth: 40 }}>
-                  <CalendarMonthIcon />
-                </ListItemIcon>
-                <ListItemText primary="Календарь" />
-              </ListItemButton>
-            </List>
-          </Stack>
-
-          <Box sx={{ mt: 'auto' }}>
-            <List disablePadding>
-              <ListItemButton
-                sx={{
-                  mb: 1,
-                  borderRadius: 2,
-                  bgcolor: 'primary.main',
-                  color: 'primary.contrastText',
-                  '&:hover': {
-                    bgcolor: 'primary.dark',
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
-                  <CreateNewFolderIcon />
-                </ListItemIcon>
-                <ListItemText primary="Новый проект" />
-              </ListItemButton>
-
-              <ListItemButton
-                component={Link}
-                to="/"
-                onClick={() => setIsMenuOpen(false)}
-                sx={{ borderRadius: 2 }}
-              >
-                <ListItemIcon sx={{ minWidth: 40 }}>
-                  <FolderIcon />
-                </ListItemIcon>
-                <ListItemText primary="Мои проекты" />
-              </ListItemButton>
-            </List>
+                {accessToken && (
+                  <ListItemButton
+                    component={Link}
+                    to="/"
+                    onClick={() => {
+                      localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+                      setAccessToken(null);
+                    }}
+                    sx={{ borderRadius: 2 }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40 }}>
+                      <KeyIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Выйти" />
+                  </ListItemButton>
+                )}
+              </List>
+            </Box>
           </Box>
-        </Box>
-      </Drawer>
+        </Drawer>
+      )}
 
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Paper
-          component="section"
-          elevation={0}
-          sx={{
-            p: { xs: 2.5, sm: 3 },
-            mb: 4,
-            borderRadius: 4,
-            border: 1,
-            borderColor: 'divider',
-          }}
-          aria-labelledby="auth-section-title"
-        >
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            spacing={2}
+        {!accessToken && (
+          <Paper
+            component="section"
+            elevation={0}
             sx={{
-              alignItems: {
-                xs: 'stretch',
-                sm: 'center',
-              },
-              justifyContent: 'space-between',
+              p: { xs: 2.5, sm: 3 },
+              mb: 4,
+              borderRadius: 4,
+              border: 1,
+              borderColor: 'divider',
             }}
+            aria-labelledby="auth-section-title"
           >
-            <Box>
-              <Typography sx={{ fontWeight: 800 }} id="auth-section-title" variant="h5">
-                {accessToken ? 'Вы авторизованы' : 'Войти в аккаунт'}
-              </Typography>
-              <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-                {accessToken
-                  ? 'Теперь доступны защищённые разделы'
-                  : 'Выберите удобный способ авторизации'}
-              </Typography>
-            </Box>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={2}
+              sx={{
+                alignItems: {
+                  xs: 'stretch',
+                  sm: 'center',
+                },
+                justifyContent: 'space-between',
+              }}
+            >
+              <Box>
+                <Typography sx={{ fontWeight: 800 }} id="auth-section-title" variant="h5">
+                  Войти в аккаунт
+                </Typography>
+                <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+                  Выберите удобный способ авторизации
+                </Typography>
+              </Box>
 
-            {accessToken ? (
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<CloseIcon />}
-                onClick={() => {
-                  localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
-                  setAccessToken(null);
-                }}
-              >
-                Выйти
-              </Button>
-            ) : (
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                 {authStrategies.map(strategy => (
                   <Button
@@ -298,10 +327,9 @@ function HomePage() {
                   </Button>
                 ))}
               </Stack>
-            )}
-          </Stack>
-        </Paper>
-
+            </Stack>
+          </Paper>
+        )}
         <Box component="section">
           <Typography sx={{ fontWeight: 900, mb: 3 }} variant="h4">
             Проекты

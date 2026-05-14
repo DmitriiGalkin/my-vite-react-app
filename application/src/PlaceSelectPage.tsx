@@ -93,8 +93,6 @@ function PlaceSelectPage() {
     }
   }, [])
 
-  const selectedPlace = places.find((place) => place.id === selectedPlaceId) || places[0]
-
   const handlePlaceClick = (placeId: number) => {
     const place = places.find((place) => place.id === placeId)
 
@@ -129,17 +127,6 @@ function PlaceSelectPage() {
 
         <section className="place-map-card">
           <div className="place-map" ref={mapRef} />
-        </section>
-
-        <section className="place-selected-card">
-          <div>
-            <span>Выбранное место</span>
-            <h2>{selectedPlace.title}</h2>
-            <p>{selectedPlace.address}</p>
-          </div>
-          <button type="button" onClick={() => navigate('/project/1/edit')}>
-            Выбрать
-          </button>
         </section>
 
         <section className="place-list">

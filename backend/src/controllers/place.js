@@ -4,7 +4,12 @@ const Place = require('../models/place');
 // Места
 exports.findAll = function(req, res) {
     Place.findAll(req.query.latitude, req.query.longitude)(function(err, meets) {
-        res.send(meets)
+      if (err) {
+        console.error('Place.findAll error:', err);
+        return res(err);
+      }
+
+      res.send(meets)
     });
 };
 // Создание места

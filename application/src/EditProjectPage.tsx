@@ -223,7 +223,7 @@ function EditProjectPage() {
               <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
                 <Stack spacing={2.5}>
                   <Typography component="h2" variant="h5" sx={{ fontWeight: 900 }}>
-                    Подписчики
+                    Участники
                   </Typography>
 
                   <Box

@@ -99,7 +99,7 @@ pipeline {
                       --env-file "$WORKSPACE/.env" \
                       -e HOME=/tmp \
                       -e npm_config_cache=/tmp/.npm \
-                      -e PM2_LOG_TRANSPORT=console
+                      -e PM2_LOG_TRANSPORT=console \
                       -v "$WORKSPACE:/workspace" \
                       -v "/etc/ssl/quantum:/run/secrets/ssl:ro" \
                       -w /workspace \

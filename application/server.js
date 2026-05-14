@@ -56,8 +56,8 @@ async function createServer() {
   // Создаём HTTPS-сервер
   const httpsServer = https.createServer(
     {
-      key: fs.readFileSync('home/user1/tmp/q3-dev.key'),
-      cert: fs.readFileSync('home/user1/tmp/q3-dev.crt'),
+      key: fs.readFileSync(process.env.SSL_KEY_PATH || '/run/secrets/ssl/private.key'),
+      cert: fs.readFileSync(process.env.SSL_CERT_PATH || '/run/secrets/ssl/certificate.crt'),
     },
     app,
   );

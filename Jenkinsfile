@@ -14,7 +14,7 @@ pipeline {
         NODE_IMAGE = 'node:latest'
         APP_DIR = 'application'
         APP_PORT = '3000'
-        HOST_PORT = '80'
+        HOST_PORT = '443'
         BACKEND_DIR = 'backend'
     }
 
@@ -100,6 +100,7 @@ pipeline {
                       -e HOME=/tmp \
                       -e npm_config_cache=/tmp/.npm \
                       -v "$WORKSPACE:/workspace" \
+                      -v "/etc/ssl/quantum:/run/secrets/ssl:ro" \
                       -w /workspace \
                       "$NODE_IMAGE" \
                       sh -lc "npm install -g pm2 && pm2 start backend/src/index.js --name backend && pm2 start application/server.js --name $APP_NAME --no-daemon"

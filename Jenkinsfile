@@ -9,8 +9,9 @@ pipeline {
     }
 
     environment {
-        APP_NAME = 'quantum-application'
-        CONTAINER_NAME = 'quantum-application'
+        CONTAINER_NAME = 'quantum'
+        APPLICATION_NAME = 'application'
+        BACKEND_NAME = 'backend'
         NODE_IMAGE = 'node:latest'
         APP_DIR = 'application'
         APP_PORT = '443'
@@ -104,7 +105,7 @@ pipeline {
                       -v "/etc/ssl/quantum:/run/secrets/ssl:ro" \
                       -w /workspace \
                       "$NODE_IMAGE" \
-                      sh -lc "npm install -g pm2 && pm2 start backend/src/index.js --name backend && pm2 start application/server.js --name $APP_NAME --no-daemon"
+                      sh -lc "npm install -g pm2 && pm2 start backend/src/index.js --name $BACKEND_NAME && pm2 start application/server.js --name $APPLICATION_NAME --no-daemon"
 
                   sleep 5
 

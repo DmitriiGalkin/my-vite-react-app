@@ -64,7 +64,7 @@ async function createServer() {
   httpsServer.listen(443, () => {
     console.log('HTTPS сервер запущен на порту 443');
   });
-  app.listen(3000, () => console.log('Server running on http://localhost:3000'));
+  //app.listen(3000, () => console.log('Server running on http://localhost:3000'));
 }
 
 createServer();

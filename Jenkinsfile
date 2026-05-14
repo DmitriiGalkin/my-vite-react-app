@@ -13,7 +13,7 @@ pipeline {
         CONTAINER_NAME = 'quantum-application'
         NODE_IMAGE = 'node:latest'
         APP_DIR = 'application'
-        APP_PORT = '3000'
+        APP_PORT = '443'
         HOST_PORT = '443'
         BACKEND_DIR = 'backend'
     }
@@ -99,6 +99,7 @@ pipeline {
                       --env-file "$WORKSPACE/.env" \
                       -e HOME=/tmp \
                       -e npm_config_cache=/tmp/.npm \
+                      -e PM2_LOG_TRANSPORT=console
                       -v "$WORKSPACE:/workspace" \
                       -v "/etc/ssl/quantum:/run/secrets/ssl:ro" \
                       -w /workspace \

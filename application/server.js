@@ -17,10 +17,13 @@ async function createServer() {
   const vite = await createViteServer({
     root: __dirname,
     middlewareMode: isProd ? 'ssr' : true, // В проде используем ssr, в деве — middleware
-    https: isProd ? undefined : { // В деве Vite сам поднимает HMR сервер с https, если нужно
-      key: fs.readFileSync('path/to/key.pem'),
-      cert: fs.readFileSync('path/to/cert.pem')
-    },
+    https: isProd
+      ? undefined
+      : {
+          // В деве Vite сам поднимает HMR сервер с https, если нужно
+          key: fs.readFileSync(process.env.SSL_KEY_PATH),
+          cert: fs.readFileSync(process.env.SSL_CERT_PATH),
+        },
     appType: 'custom',
   });
 

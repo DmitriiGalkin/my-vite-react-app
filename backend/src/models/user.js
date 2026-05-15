@@ -27,8 +27,8 @@ User.update = function(user, result){
 };
 
 User.delete = function(id, result){
-    dbConn.query(`UPDATE user SET deleted = NOW() WHERE id = ?`, id, function (err, res) {
-        result(null, res);
+    dbConn.query(`UPDATE user SET deletedAt = NOW() WHERE id = ?`, id, function (err, res) {
+      result(null, res);
     });
 };
 
@@ -42,16 +42,16 @@ User.findById = function (id, result) {
 };
 // Участники по паспорту
 User.findByPassportId = function (id, result) {
-    dbConn.query("SELECT * from user where passportId = ? AND deleted IS NULL", id, function (err, res) {
+    dbConn.query("SELECT * from user where passportId = ? AND deletedAt IS NULL", id, function (err, res) {
         result(null, res || []);
     });
 };
 // Участник
-User.findByEmail = function (email, result) {
-    dbConn.query("SELECT * from user where email = ? ", email, function (err, res) {
-        result(null, res?.length ? res[0] : undefined);
-    });
-};
+// User.findByEmail = function (email, result) {
+//     dbConn.query("SELECT * from user where email = ? ", email, function (err, res) {
+//         result(null, res?.length ? res[0] : undefined);
+//     });
+// };
 
 const parse = (res) => {
     return res

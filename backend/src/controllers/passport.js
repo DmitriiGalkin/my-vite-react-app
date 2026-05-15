@@ -85,10 +85,10 @@ exports.usePassport = function(req, res, next) {
         Passport.findByAccessToken(token, function(err, passport) {
             if (passport) {
                 req.passport = passport
-                User.findByPassportId(passport.id, function(err, users) {
-                    req.users = users
-                    next()
-                })
+                User.findByPassportId(passport.id, function (err, users) {
+                  req.users = users;
+                  next();
+                });
             } else {
                 // Надо бы его разлогинить
                 res.status(401).send({ error:true, message: 'Токен протух' });

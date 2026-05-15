@@ -13,21 +13,21 @@ Visit.create = function (newEmp, result) {
         result(null, res.insertId);
     });
 };
-Visit.started = function(id, result){
-    dbConn.query("UPDATE visit SET started = CURRENT_TIMESTAMP() WHERE id = ?", [id], function (err, res) {
-        result(null, res);
-    });
-};
-Visit.stopped = function(id, result){
-    dbConn.query("UPDATE visit SET stopped = CURRENT_TIMESTAMP() WHERE id = ?", [id], function (err, res) {
-        result(null, res);
-    });
-};
-Visit.paided = function(id, result){
-    dbConn.query("UPDATE visit SET paided = CURRENT_TIMESTAMP() WHERE id = ?", [id], function (err, res) {
-        result(null, res);
-    });
-};
+// Visit.started = function(id, result){
+//     dbConn.query("UPDATE visit SET started = CURRENT_TIMESTAMP() WHERE id = ?", [id], function (err, res) {
+//         result(null, res);
+//     });
+// };
+// Visit.stopped = function(id, result){
+//     dbConn.query("UPDATE visit SET stopped = CURRENT_TIMESTAMP() WHERE id = ?", [id], function (err, res) {
+//         result(null, res);
+//     });
+// };
+// Visit.paided = function(id, result){
+//     dbConn.query("UPDATE visit SET paided = CURRENT_TIMESTAMP() WHERE id = ?", [id], function (err, res) {
+//         result(null, res);
+//     });
+// };
 Visit.delete = function(id, result){
     dbConn.query(`DELETE FROM visit WHERE id = ${id}`, function (err, res) {
         result(null, res);
@@ -39,10 +39,14 @@ Visit.findById = function(id, result){
     });
 };
 Visit.findByUserId = function(userId, result){
-    dbConn.query("SELECT visit.*, meet.datetime FROM visit LEFT JOIN meet ON meet.id = visit.meetId WHERE userId = ? ORDER BY meet.datetime DESC", [userId], function (err, res) {
-        if (err) console.log(err, 'Visit.findByUserId.err')
+    dbConn.query(
+      'SELECT visit.*, meet.startedAt FROM visit LEFT JOIN meet ON meet.id = visit.meetId WHERE userId = ? ORDER BY meet.startedAt DESC',
+      [userId],
+      function (err, res) {
+        if (err) console.log(err, 'Visit.findByUserId.err');
         result(null, res.length ? res : []);
-    });
+      },
+    );
 };
 Visit.findByUserAndMeetIds = function(userId, meetId, result){
     dbConn.query("SELECT * FROM visit WHERE userId = ? AND meetId =?", [userId, meetId], function (err, res) {

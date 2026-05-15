@@ -10,13 +10,14 @@ exports.create = function(req, res) {
     Meet.findById(req.body.meetId, function(err) {
         if (err) { return res.json({error:true, message: "Встреча не найдена"}); }
         Visit.findByUserAndMeetIds(req.body.userId, req.body.meetId, function(err, currentVisit) {
-            if (currentVisit) { return res.json({error:true,message:"Участие уже существует"}); }
-            if (!req.users.map(u=>u.id).includes(req.body.userId)) { return res.json({error:true,message:"Нельзя добавлять участника отличного от себя"}); }
 
-            const visit = new Visit(req.body);
-            Visit.create(visit, function() {
-                res.json({error:false,message:"Участие создано"});
-            });
+          if (currentVisit) { return res.json({error:true,message:"Участие уже существует"}); }
+          if (!req.users.map(u=>u.id).includes(req.body.userId)) { return res.json({error:true,message:"Нельзя добавлять участника отличного от себя"}); }
+
+          const visit = new Visit(req.body);
+          Visit.create(visit, function() {
+              res.json({error:false,message:"Участие создано"});
+          });
         })
     })
 };

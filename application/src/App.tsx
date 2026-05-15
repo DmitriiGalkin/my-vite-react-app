@@ -35,7 +35,7 @@ import CreateProjectPage from './CreateProjectPage';
 import EditProjectPage from './EditProjectPage';
 import PlaceSelectPage from './PlaceSelectPage';
 import './App.css';
-import type { Project } from './types';
+import type { Meet, Passport, Project, User } from './types';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from './api.ts';
 
@@ -62,6 +62,15 @@ function saveAccessTokenFromUrl() {
 }
 
 type Type = 'self' | 'ideas' | 'projects' | null;
+
+interface ExtendedPassport extends Passport {
+  users?: User[];
+}
+
+async function fetchPassport(): Promise<ExtendedPassport> {
+  return apiFetch<ExtendedPassport>('/passport');
+}
+
 async function fetchProjects(type: Type, userId: number): Promise<Project[]> {
   return apiFetch<Project[]>('/projects' + '?variant=' + type + '&userId=' + userId);
 }
@@ -95,6 +104,14 @@ function HomePage() {
       });
     }
   }, [accessToken, initialAccessToken]);
+
+  const { data: passport } = useQuery({
+    queryKey: ['passport'],
+    queryFn: fetchPassport,
+    enabled: Boolean(accessToken),
+  });
+
+  const currentUser = passport?.users?.[0];
 
   const {
     data: projects = [],
@@ -132,12 +149,12 @@ function HomePage() {
               onClick={() => setIsMenuOpen(currentValue => !currentValue)}
             >
               <Avatar
-                src="https://i.pravatar.cc/120?img=5"
-                alt="Настя Галкина"
+                src={currentUser?.image || undefined}
+                alt={currentUser?.title || 'Пользователь'}
                 sx={{ border: '2px solid white' }}
               />
               <Typography sx={{ fontWeight: 700 }} component="span" variant="subtitle1">
-                Настя Галкина
+                {currentUser?.title || 'Пользователь'}
               </Typography>
             </Stack>
           ) : (
@@ -166,14 +183,16 @@ function HomePage() {
                 }}
               >
                 <Avatar
-                  src="https://i.pravatar.cc/120?img=5"
-                  alt="Настя Галкина"
+                  src={currentUser?.image || undefined}
+                  alt={currentUser?.title || 'Пользователь'}
                   sx={{ width: 56, height: 56 }}
                 />
                 <Box>
-                  <Typography sx={{ fontWeight: 800 }}>Настя Галкина</Typography>
+                  <Typography sx={{ fontWeight: 800 }}>
+                    {currentUser?.title || 'Пользователь'}
+                  </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    10 лет
+                    {currentUser?.age ? `${currentUser.age} лет` : 'Возраст не указан'}
                   </Typography>
                 </Box>
               </Stack>

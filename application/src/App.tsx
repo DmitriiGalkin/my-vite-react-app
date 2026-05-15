@@ -6,10 +6,6 @@ import {
   Avatar,
   Box,
   Button,
-  Card,
-  CardActions,
-  CardContent,
-  CardMedia,
   CircularProgress,
   Container,
   Drawer,
@@ -35,6 +31,7 @@ import CreateProjectPage from './CreateProjectPage';
 import EditProjectPage from './EditProjectPage';
 import PlaceSelectPage from './PlaceSelectPage';
 import ChatPage from './ChatPage';
+import ProjectCard from './ProjectCard';
 import './App.css';
 import type { Passport, Project, User } from './types';
 import { useQuery } from '@tanstack/react-query';
@@ -395,46 +392,7 @@ function HomePage() {
               }}
             >
               {projects.map(project => (
-                <Card
-                  component="article"
-                  key={project.id}
-                  elevation={0}
-                  sx={{
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    borderRadius: 4,
-                    border: 1,
-                    borderColor: 'divider',
-                    overflow: 'hidden',
-                  }}
-                >
-                  <CardMedia
-                    component="img"
-                    height="180"
-                    image={project.image || 'https://placehold.co/600x400?text=Project'}
-                    alt={project.title || 'Проект'}
-                    sx={{ objectFit: 'cover' }}
-                  />
-
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 800 }} gutterBottom>
-                      {project.title}
-                    </Typography>
-                    <Typography color="text.secondary">{project.description}</Typography>
-                  </CardContent>
-
-                  <CardActions sx={{ px: 2, pb: 2 }}>
-                    <Button
-                      component={Link}
-                      to={`/project/${project.id}`}
-                      variant="contained"
-                      fullWidth
-                    >
-                      Подробнее
-                    </Button>
-                  </CardActions>
-                </Card>
+                <ProjectCard project={project} key={project.id} />
               ))}
             </Box>
           )}

@@ -16,6 +16,8 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MicIcon from '@mui/icons-material/Mic';
 import SendIcon from '@mui/icons-material/Send';
 import { apiFetch } from './api';
+import ProjectCard from './ProjectCard';
+import type { Project } from './types';
 
 type ChatMessage = {
   id: number;
@@ -32,6 +34,22 @@ type SendMessageResponse = {
   chatId: number;
   messages: ChatMessage[];
 };
+
+function getProjectFromMetadata(metadata: unknown): Project | null {
+  if (!metadata) {
+    return null;
+  }
+
+  if (typeof metadata === 'string') {
+    try {
+      return JSON.parse(metadata) as Project;
+    } catch {
+      return null;
+    }
+  }
+
+  return metadata as Project;
+}
 
 type SpeechRecognitionConstructor = new () => SpeechRecognition;
 
@@ -296,28 +314,38 @@ function ChatPage() {
             </Typography>
           )}
 
-          {messages.map(chatMessage => (
-            <Paper
-              key={chatMessage.id}
-              elevation={0}
-              sx={{
-                p: 2,
-                alignSelf: chatMessage.role === 'user' ? 'flex-end' : 'flex-start',
-                maxWidth: '80%',
-                borderRadius: chatMessage.role === 'user' ? '16px 16px 0 16px' : '16px 16px 16px 0 ',
-                border: chatMessage.role === 'user' ? 0 : 1,
-                borderColor: 'divider',
-                bgcolor: chatMessage.role === 'user' ? '#FFB628' : 'white',
-                color: chatMessage.role === 'user' ? '#111827' : 'text.primary',
-              }}
-            >
-              <Typography>{chatMessage.content}</Typography>
-            </Paper>
-          ))}
+              {messages.map(chatMessage => {
+                const project = getProjectFromMetadata(chatMessage.metadata);
 
-          <Box ref={messagesEndRef} />
-        </Stack>
-      </Container>
+                return (
+                  <Paper
+                    key={chatMessage.id}
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      alignSelf: chatMessage.role === 'user' ? 'flex-end' : 'flex-start',
+                      maxWidth: '80%',
+                      borderRadius: chatMessage.role === 'user' ? '16px 16px 0 16px' : '16px 16px 16px 0 ',
+                      border: chatMessage.role === 'user' ? 0 : 1,
+                      borderColor: 'divider',
+                      bgcolor: chatMessage.role === 'user' ? '#FFB628' : 'white',
+                      color: chatMessage.role === 'user' ? '#111827' : 'text.primary',
+                    }}
+                  >
+                    <Typography>{chatMessage.content}</Typography>
+
+                    {project && (
+                      <Box sx={{ mt: 2 }}>
+                        <ProjectCard project={project} />
+                      </Box>
+                    )}
+                  </Paper>
+                );
+              })}
+
+              <Box ref={messagesEndRef} />
+            </Stack>
+          </Container>
 
       <Box
         component="footer"

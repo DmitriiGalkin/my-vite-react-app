@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AppBar,
@@ -16,6 +16,22 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MicIcon from '@mui/icons-material/Mic';
 import SendIcon from '@mui/icons-material/Send';
 import { apiFetch } from './api';
+
+type ChatMessage = {
+  id: number;
+  chatId: number;
+  passportId: number | null;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  source: 'text' | 'voice';
+  metadata: unknown;
+  createdAt: string;
+};
+
+type SendMessageResponse = {
+  chatId: number;
+  messages: ChatMessage[];
+};
 
 type SpeechRecognitionConstructor = new () => SpeechRecognition;
 
@@ -50,10 +66,56 @@ declare global {
 
 function ChatPage() {
   const [message, setMessage] = useState('');
+  const [chatId, setChatId] = useState<number | null>(() => {
+    const savedChatId = localStorage.getItem('active_chat_id');
+
+    return savedChatId ? Number(savedChatId) : null;
+  });
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isMessagesLoading, setIsMessagesLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'end',
+    });
+  }, [messages]);
+
+  useEffect(() => {
+    if (!chatId) {
+      return;
+    }
+
+    let isMounted = true;
+
+    async function fetchMessages() {
+      setIsMessagesLoading(true);
+
+      try {
+        const loadedMessages = await apiFetch<ChatMessage[]>(`/chat/${chatId}/messages`);
+
+        if (isMounted) {
+          setMessages(loadedMessages);
+        }
+      } catch (error) {
+        console.log(error, 'error');
+      } finally {
+        if (isMounted) {
+          setIsMessagesLoading(false);
+        }
+      }
+    }
+
+    fetchMessages();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [chatId]);
   const handleMicrophoneClick = () => {
     if (isListening) {
       recognitionRef.current?.stop();
@@ -81,6 +143,7 @@ function ChatPage() {
       ).join(' ');
 
       setMessage(transcript);
+      console.log(transcript);
     };
 
     recognition.onend = () => {
@@ -108,16 +171,20 @@ function ChatPage() {
     setIsSending(true);
 
     try {
-      await apiFetch('/chat', {
+      const response = await apiFetch<SendMessageResponse>('/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          chatId,
           message: trimmedMessage,
         }),
       });
 
+      setChatId(response.chatId);
+      localStorage.setItem('active_chat_id', String(response.chatId));
+      setMessages(currentMessages => [...currentMessages, ...response.messages]);
       setMessage('');
     } catch (error) {
       console.log(error, 'error');
@@ -160,7 +227,7 @@ function ChatPage() {
         maxWidth="md"
         sx={{
           py: 3,
-          pb: 12,
+          pb: 8,
           minHeight: 'calc(100vh - 64px)',
           display: 'flex',
           flexDirection: 'column',
@@ -223,19 +290,32 @@ function ChatPage() {
             </Typography>
           </Paper>
 
-          <Paper
-            elevation={0}
-            sx={{
-              p: 2,
-              alignSelf: 'flex-end',
-              maxWidth: '80%',
-              borderRadius: 4,
-              bgcolor: '#FFB628',
-              color: '#111827',
-            }}
-          >
-            <Typography>Хочу придумать новый проект.</Typography>
-          </Paper>
+          {isMessagesLoading && (
+            <Typography color="text.secondary" sx={{ alignSelf: 'center' }}>
+              Загружаем историю...
+            </Typography>
+          )}
+
+          {messages.map(chatMessage => (
+            <Paper
+              key={chatMessage.id}
+              elevation={0}
+              sx={{
+                p: 2,
+                alignSelf: chatMessage.role === 'user' ? 'flex-end' : 'flex-start',
+                maxWidth: '80%',
+                borderRadius: chatMessage.role === 'user' ? '16px 16px 0 16px' : '16px 16px 16px 0 ',
+                border: chatMessage.role === 'user' ? 0 : 1,
+                borderColor: 'divider',
+                bgcolor: chatMessage.role === 'user' ? '#FFB628' : 'white',
+                color: chatMessage.role === 'user' ? '#111827' : 'text.primary',
+              }}
+            >
+              <Typography>{chatMessage.content}</Typography>
+            </Paper>
+          ))}
+
+          <Box ref={messagesEndRef} />
         </Stack>
       </Container>
 

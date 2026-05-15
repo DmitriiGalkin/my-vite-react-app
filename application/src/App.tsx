@@ -34,6 +34,7 @@ import ProjectPage from './ProjectPage';
 import CreateProjectPage from './CreateProjectPage';
 import EditProjectPage from './EditProjectPage';
 import PlaceSelectPage from './PlaceSelectPage';
+import ChatPage from './ChatPage';
 import './App.css';
 import type { Passport, Project, User } from './types';
 import { useQuery } from '@tanstack/react-query';
@@ -165,7 +166,13 @@ function HomePage() {
             </div>
           )}
 
-          <IconButton color="primary" aria-label="Идеи от АИ" sx={{ color: 'white' }}>
+          <IconButton
+            component={Link}
+            to="/chat"
+            color="primary"
+            aria-label="Идеи от АИ"
+            sx={{ color: 'white' }}
+          >
             <AutoAwesomeIcon />
           </IconButton>
         </Toolbar>
@@ -452,6 +459,7 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/chat" element={<ChatPage />} />
       <Route path="/project/create" element={<CreateProjectPage />} />
       <Route path="/project/:id" element={<ProjectPage />} />
       <Route path="/project/:id/edit" element={<EditProjectPage />} />

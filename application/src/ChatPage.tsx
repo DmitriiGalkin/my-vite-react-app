@@ -1,9 +1,9 @@
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AppBar,
   Avatar,
   Box,
-  Button,
   Container,
   IconButton,
   Paper,
@@ -13,9 +13,120 @@ import {
   Typography,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import MicIcon from '@mui/icons-material/Mic';
 import SendIcon from '@mui/icons-material/Send';
+import { apiFetch } from './api';
+
+type SpeechRecognitionConstructor = new () => SpeechRecognition;
+
+type SpeechRecognition = {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+};
+
+type SpeechRecognitionEvent = {
+  results: {
+    [index: number]: {
+      [index: number]: {
+        transcript: string;
+      };
+    };
+    length: number;
+  };
+};
+
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
 
 function ChatPage() {
+  const [message, setMessage] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+  const handleMicrophoneClick = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognitionApi) {
+      alert('Распознавание речи не поддерживается в этом браузере.');
+      return;
+    }
+
+    const recognition = new SpeechRecognitionApi();
+
+    recognition.lang = 'ru-RU';
+    recognition.interimResults = true;
+    recognition.continuous = true;
+
+    recognition.onresult = event => {
+      const transcript = Array.from(
+        { length: event.results.length },
+        (_, index) => event.results[index][0].transcript,
+      ).join(' ');
+
+      setMessage(transcript);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+    };
+
+    recognition.onerror = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+    };
+
+    recognitionRef.current = recognition;
+    setIsListening(true);
+    recognition.start();
+  };
+
+  const handleSendMessage = async () => {
+    const trimmedMessage = message.trim();
+
+    if (!trimmedMessage || isSending) {
+      return;
+    }
+
+    setIsSending(true);
+
+    try {
+      await apiFetch('/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: trimmedMessage,
+        }),
+      });
+
+      setMessage('');
+    } catch (error) {
+      console.log(error, 'error');
+      alert('Не удалось отправить сообщение. Попробуйте ещё раз.');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
       <AppBar
@@ -49,6 +160,7 @@ function ChatPage() {
         maxWidth="md"
         sx={{
           py: 3,
+          pb: 12,
           minHeight: 'calc(100vh - 64px)',
           display: 'flex',
           flexDirection: 'column',
@@ -125,41 +237,61 @@ function ChatPage() {
             <Typography>Хочу придумать новый проект.</Typography>
           </Paper>
         </Stack>
+      </Container>
 
-        <Paper
-          elevation={0}
-          sx={{
-            mt: 3,
-            p: 1,
-            borderRadius: 4,
-            border: 1,
-            borderColor: 'divider',
-            bgcolor: 'white',
-          }}
-        >
+      <Box
+        component="footer"
+        sx={{
+          position: 'fixed',
+          right: 0,
+          bottom: 0,
+          left: 0,
+          zIndex: 1200,
+          borderTop: 1,
+          borderColor: 'divider',
+          bgcolor: 'rgba(255, 255, 255, 0.96)',
+          backdropFilter: 'blur(8px)',
+          px: 2,
+          py: 1,
+          pb: 'calc(8px + env(safe-area-inset-bottom))',
+        }}
+      >
+        <Container maxWidth="md" disableGutters>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <TextField
               fullWidth
               size="small"
               placeholder="Введите сообщение..."
               variant="outlined"
+              value={message}
+              onChange={event => setMessage(event.target.value)}
             />
-            <Button
-              variant="contained"
-              endIcon={<SendIcon />}
+            <IconButton
+              aria-label={isListening ? 'Остановить запись' : 'Говорить'}
+              onClick={handleMicrophoneClick}
               sx={{
-                whiteSpace: 'nowrap',
-                bgcolor: '#111827',
-                '&:hover': {
-                  bgcolor: '#1f2937',
-                },
+                color: isListening ? '#FF8F28' : '#111827',
+                border: 1,
+                borderColor: isListening ? '#FF8F28' : 'divider',
               }}
             >
-              Отправить
-            </Button>
+              <MicIcon />
+            </IconButton>
+            <IconButton
+              aria-label="Отправить"
+              disabled={!message.trim() || isSending}
+              onClick={handleSendMessage}
+              sx={{
+                color: isSending ? '#FF8F28' : '#111827',
+                border: 1,
+                borderColor: isSending ? '#FF8F28' : 'divider',
+              }}
+            >
+              <SendIcon />
+            </IconButton>
           </Stack>
-        </Paper>
-      </Container>
+        </Container>
+      </Box>
     </Box>
   );
 }

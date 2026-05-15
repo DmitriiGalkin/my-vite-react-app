@@ -36,13 +36,15 @@ function findOrCreate(accessToken, refreshToken, profile, cb) {
 
 
 function createStrategy(Strategy, provider, options = {}) {
-    console.log(process.env[`${provider}_STRATEGY_CLIENT_ID`],'process.env[`${provider}_STRATEGY_CLIENT_ID`]')
-    return new Strategy({
-        clientID: process.env[`${provider}_STRATEGY_CLIENT_ID`],
-        clientSecret: process.env[`${provider}_STRATEGY_CLIENT_SECRET`],
-        callbackURL: `${API_URL}/oauth2/redirect/${provider.toLowerCase()}`,
-        ...options,
-    }, findOrCreate);
+  return new Strategy(
+    {
+      clientID: process.env[`${provider}_STRATEGY_CLIENT_ID`],
+      clientSecret: process.env[`${provider}_STRATEGY_CLIENT_SECRET`],
+      callbackURL: `${API_URL}/oauth2/redirect/${provider.toLowerCase()}`,
+      ...options,
+    },
+    findOrCreate,
+  );
 }
 
 exports.google = createStrategy(GoogleStrategy, 'GOOGLE', {
@@ -55,3 +57,4 @@ exports.google = createStrategy(GoogleStrategy, 'GOOGLE', {
 exports.yandex = createStrategy(YandexStrategy, 'YANDEX');
 
 //exports.vkontakte = createStrategy(VKStrategy, 'VKONTAKTE');
+

@@ -9,8 +9,12 @@
   <meta name="description" content="<!--app-description-->" />
 
   <link rel="manifest" href="/manifest.webmanifest" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <!-- Для iOS/Safari -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <!-- Для Android/Chrome и других PWA-браузеров -->
+  <meta name="mobile-web-app-capable" content="yes">
+
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Quantum" />
   <link rel="apple-touch-icon" href="/icons/192.png" />
 

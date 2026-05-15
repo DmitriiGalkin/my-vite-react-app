@@ -214,22 +214,6 @@ function ProjectPage() {
                   }}
                 >
                   <Typography variant="body2" color="text.secondary">
-                    Возраст
-                  </Typography>
-                  <Typography sx={{ fontWeight: 800 }}>
-                    {project.ageFrom}-{project.ageTo} лет
-                  </Typography>
-                </Paper>
-
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: 2,
-                    borderRadius: 3,
-                    bgcolor: 'grey.100',
-                  }}
-                >
-                  <Typography variant="body2" color="text.secondary">
                     Организатор
                   </Typography>
                   <Typography sx={{ fontWeight: 800 }}>{project?.passport?.title}</Typography>

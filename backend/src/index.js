@@ -6,8 +6,10 @@ const router = require('./router');
 const cors = require('cors');
 var session = require('express-session');
 const createError = require('http-errors');
+const http = require('http');
 const https = require('https');
 const fs = require('fs');
+const { resolve } = require('node:path');
 
 const port = process.env.PORT || 4000; // Setup server port
 
@@ -49,11 +51,21 @@ app.use((error, req, res, next) => {
   // })
 });
 
-const sslOptions = {
-  key: fs.readFileSync(process.env.SSL_KEY_PATH || '/run/secrets/ssl/private.key'),
-  cert: fs.readFileSync(process.env.SSL_CERT_PATH || '/run/secrets/ssl/certificate.crt'),
-};
+const isDev = process.env.NODE_ENV === 'development';
 
-https.createServer(sslOptions, app).listen(port, () => {
-  console.log(`HTTPS server listening on port ${port}`);
-});
+if (!isDev) {
+  const sslOptions = {
+    key: fs.readFileSync(process.env.SSL_KEY_PATH || resolve(__dirname, 'private.key')),
+    cert: fs.readFileSync(process.env.SSL_CERT_PATH || resolve(__dirname, 'certificate.crt')),
+  };
+
+  https.createServer(sslOptions, app).listen(port, () => {
+    console.log(`HTTPS server listening on port ${port}`);
+  });
+} else {
+
+  http.createServer(app).listen(port, () => {
+    console.log(`HTTP сервер запущен на http://localhost:${port}`);
+  });
+}
+

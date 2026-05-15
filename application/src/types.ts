@@ -40,8 +40,6 @@ export interface Project {
   title: string | null
   description: string | null
   image: string | null
-  ageFrom: number | null
-  ageTo: number | null
   deletedAt: string | null
 }
 

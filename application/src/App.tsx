@@ -31,6 +31,7 @@ import FolderIcon from '@mui/icons-material/Folder';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import AddIcon from '@mui/icons-material/Add';
 import ProjectPage from './ProjectPage';
+import CreateProjectPage from './CreateProjectPage';
 import EditProjectPage from './EditProjectPage';
 import PlaceSelectPage from './PlaceSelectPage';
 import './App.css';
@@ -179,6 +180,8 @@ function HomePage() {
 
               <List disablePadding>
                 <ListItemButton
+                  component={Link}
+                  to="/project/create"
                   sx={{
                     mb: 1,
                     borderRadius: 2,
@@ -227,6 +230,9 @@ function HomePage() {
             <Box sx={{ mt: 'auto' }}>
               <List disablePadding>
                 <ListItemButton
+                  component={Link}
+                  to="/project/create"
+                  onClick={() => setIsMenuOpen(false)}
                   sx={{
                     mb: 1,
                     borderRadius: 2,
@@ -427,6 +433,7 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/project/create" element={<CreateProjectPage />} />
       <Route path="/project/:id" element={<ProjectPage />} />
       <Route path="/project/:id/edit" element={<EditProjectPage />} />
       <Route path="/project/:id/edit/place" element={<PlaceSelectPage />} />

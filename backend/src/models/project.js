@@ -7,8 +7,6 @@ var Project = function (data) {
   this.description = data.description;
   this.image = data.image;
   this.passportId = data.passportId; // Создатель проекта
-  this.ageFrom = data.ageFrom;
-  this.ageTo = data.ageTo;
   this.placeId = data.placeId;
 };
 
@@ -25,8 +23,8 @@ Project.create = function (data, result) {
 
 Project.update = function (id, obj, result) {
   dbConn.query(
-    'UPDATE project SET title=?, description=?, image=?, ageFrom=?, ageTo=?, placeId=? WHERE id = ?',
-    [obj.title, obj.description, obj.image, obj.ageFrom, obj.ageTo, obj.placeId, id],
+    'UPDATE project SET title=?, description=?, image=?, placeId=? WHERE id = ?',
+    [obj.title, obj.description, obj.image, obj.placeId, id],
     function (err, res) {
       if (err) {
         console.error('Project.update error:', err);
@@ -40,7 +38,7 @@ Project.update = function (id, obj, result) {
 
 Project.delete = function (id, result) {
   dbConn.query(
-    'UPDATE project SET deleted = CURRENT_TIMESTAMP() WHERE id = ?',
+    'UPDATE project SET deletedAt = CURRENT_TIMESTAMP() WHERE id = ?',
     [id],
     function (err, res) {
       if (err) {

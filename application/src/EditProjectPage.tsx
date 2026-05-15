@@ -1,51 +1,93 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
+  Alert,
   Avatar,
   Box,
-  Button,
   Card,
   CardContent,
+  CircularProgress,
   Container,
   IconButton,
   Paper,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
-import SaveIcon from '@mui/icons-material/Save';
+import { useQuery } from '@tanstack/react-query';
+import { apiFetch } from './api';
+import ProjectForm, { type ProjectFormValues } from './ProjectForm';
+import type { Place, Project, User } from './types';
 
-const subscribers = [
-  {
-    id: 1,
-    name: 'Настя',
-    age: '8 лет',
-    image: 'https://i.pravatar.cc/80?img=5',
-  },
-  {
-    id: 2,
-    name: 'Настя',
-    age: '8 лет',
-    image: 'https://i.pravatar.cc/80?img=6',
-  },
-  {
-    id: 3,
-    name: 'Настя',
-    age: '8 лет',
-    image: 'https://i.pravatar.cc/80?img=7',
-  },
-  {
-    id: 4,
-    name: 'Настя',
-    age: '8 лет',
-    image: 'https://i.pravatar.cc/80?img=8',
-  },
-];
+interface ProjectDetails extends Project {
+  place?: Place | null;
+  participations?: User[];
+}
+
+function toFormValues(project: ProjectDetails): ProjectFormValues {
+  return {
+    title: project.title ?? '',
+    description: project.description ?? '',
+    image: project.image ?? '',
+  };
+}
 
 function EditProjectPage() {
   const navigate = useNavigate();
+  const { id } = useParams();
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const projectId = id ? Number(id) : null;
+
+  const {
+    data: project,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ['project', projectId],
+    queryFn: () => apiFetch<ProjectDetails>(`/project/${projectId}`),
+    enabled: projectId !== null && !Number.isNaN(projectId),
+  });
+
+  async function handleSubmit(values: ProjectFormValues) {
+    if (!projectId) {
+      setSubmitError('Не удалось определить номер проекта.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      await apiFetch(`/project/${projectId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: values.title,
+          description: values.description,
+          image: values.image || null,
+        }),
+      });
+
+      navigate(`/project/${projectId}`);
+    } catch {
+      setSubmitError('Не удалось сохранить изменения. Попробуйте ещё раз.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  if (!projectId || Number.isNaN(projectId)) {
+    return (
+      <Container maxWidth="sm" sx={{ py: 8 }}>
+        <Alert severity="error">Некорректный номер проекта.</Alert>
+      </Container>
+    );
+  }
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
@@ -56,237 +98,120 @@ function EditProjectPage() {
           </IconButton>
 
           <Typography component="h1" variant="h4" sx={{ fontWeight: 900 }}>
-            EditProject
+            Редактирование проекта
           </Typography>
         </Stack>
 
-        <Box component="form">
-          <Stack spacing={3}>
-            <Card
-              elevation={0}
-              sx={{
-                borderRadius: 4,
-                border: 1,
-                borderColor: 'divider',
-              }}
-            >
-              <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
-                <Stack spacing={2.5}>
-                  <TextField
-                    label="Название проекта"
-                    type="text"
-                    defaultValue="Женские встречи с заботой..."
-                    fullWidth
-                  />
+        {isLoading && (
+          <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+            <CircularProgress size={24} />
+            <Typography>Загрузка проекта...</Typography>
+          </Stack>
+        )}
 
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                    <TextField label="Возраст от" type="number" defaultValue={3} fullWidth />
+        {isError && <Alert severity="error">Не удалось загрузить проект.</Alert>}
 
-                    <TextField label="Возраст до" type="number" defaultValue={3} fullWidth />
-                  </Stack>
-                </Stack>
-              </CardContent>
-            </Card>
+        {project && (
+          <ProjectForm
+            key={project.id}
+            initialValues={toFormValues(project)}
+            submitButtonText="Сохранить изменения"
+            submittingButtonText="Сохраняем..."
+            placeSelectPath={`/project/${project.id}/edit/place`}
+            isSubmitting={isSubmitting}
+            submitError={submitError}
+            onSubmit={handleSubmit}
+            placeInfo={
+              project.place ? (
+                <>
+                  {project.place.title && (
+                    <Typography sx={{ fontWeight: 900, mb: 1 }}>{project.place.title}</Typography>
+                  )}
 
-            <Card
-              elevation={0}
-              sx={{
-                borderRadius: 4,
-                border: 1,
-                borderColor: 'divider',
-              }}
-            >
-              <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
-                <TextField
-                  label="Описание"
-                  multiline
-                  rows={6}
-                  defaultValue="Встречаемся, мажемся кремиками, массируем себя скребками, плавно потягиваемся и напитываемся нежностью."
-                  fullWidth
-                />
-              </CardContent>
-            </Card>
-
-            <Card
-              elevation={0}
-              sx={{
-                borderRadius: 4,
-                border: 1,
-                borderColor: 'divider',
-              }}
-            >
-              <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
-                <Stack
-                  direction={{ xs: 'column', sm: 'row' }}
-                  spacing={2}
-                  sx={{
-                    alignItems: { xs: 'stretch', sm: 'center' },
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Обложка проекта
+                  {project.place.address && (
+                    <Typography color="text.secondary" sx={{ mb: 1.5 }}>
+                      {project.place.address}
                     </Typography>
-                    <Typography sx={{ fontWeight: 800 }}>
-                      Загрузите изображение для карточки
-                    </Typography>
-                  </Box>
+                  )}
 
-                  <Button component="label" variant="contained" startIcon={<CloudUploadIcon />}>
-                    Выбрать файл
-                    <Box
-                      component="input"
-                      type="file"
-                      accept="image/*"
-                      sx={{
-                        clip: 'rect(0 0 0 0)',
-                        clipPath: 'inset(50%)',
-                        height: 1,
-                        overflow: 'hidden',
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        whiteSpace: 'nowrap',
-                        width: 1,
-                      }}
-                    />
-                  </Button>
-                </Stack>
-              </CardContent>
-            </Card>
-
-            <Card
-              elevation={0}
-              sx={{
-                borderRadius: 4,
-                border: 1,
-                borderColor: 'divider',
-              }}
-            >
-              <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
-                <Stack spacing={2.5}>
-                  <Typography component="h2" variant="h5" sx={{ fontWeight: 900 }}>
-                    Место
-                  </Typography>
-
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                    <Button
-                      component={Link}
-                      to="/project/1/edit/place"
-                      variant="contained"
-                      startIcon={<LocationOnIcon />}
-                    >
-                      Выбрать на карте
-                    </Button>
-
-                    <Button type="button" variant="outlined">
-                      Перекресток
-                    </Button>
-                  </Stack>
-
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: 2.5,
-                      borderRadius: 3,
-                      bgcolor: 'grey.100',
-                    }}
-                  >
-                    <Typography sx={{ mb: 1.5 }}>
-                      Стоимость аренды зала 1000 рублей в час. У них три зала и только в одном можно
-                      провести балет. Могут предоставить столы и стулья. Могут предоставить узкий
-                      гос интернет.
+                  {project.place.description && (
+                    <Typography>{project.place.description}</Typography>
+                  )}
+                </>
+              ) : (
+                <Typography color="text.secondary">Место пока не выбрано.</Typography>
+              )
+            }
+            extraContent={
+              <Card
+                elevation={0}
+                sx={{
+                  borderRadius: 4,
+                  border: 1,
+                  borderColor: 'divider',
+                }}
+              >
+                <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+                  <Stack spacing={2.5}>
+                    <Typography component="h2" variant="h5" sx={{ fontWeight: 900 }}>
+                      Участники
                     </Typography>
 
-                    <Typography>
-                      Окончательное подтверждение времени необходимо производить по телефону:
-                      <Typography component="strong" sx={{ fontWeight: 900 }}>
-                        {' '}
-                        89265463465
-                      </Typography>
-                      .
-                    </Typography>
-                  </Paper>
-                </Stack>
-              </CardContent>
-            </Card>
-
-            <Card
-              elevation={0}
-              sx={{
-                borderRadius: 4,
-                border: 1,
-                borderColor: 'divider',
-              }}
-            >
-              <CardContent sx={{ p: { xs: 2.5, sm: 3 } }}>
-                <Stack spacing={2.5}>
-                  <Typography component="h2" variant="h5" sx={{ fontWeight: 900 }}>
-                    Участники
-                  </Typography>
-
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: {
-                        xs: 'repeat(2, minmax(0, 1fr))',
-                        sm: 'repeat(4, minmax(0, 1fr))',
-                      },
-                      gap: 2,
-                    }}
-                  >
-                    {subscribers.map(subscriber => (
-                      <Paper
-                        component="article"
-                        elevation={0}
-                        key={subscriber.id}
+                    {project.participations?.length ? (
+                      <Box
                         sx={{
-                          p: 2,
-                          textAlign: 'center',
-                          borderRadius: 3,
-                          bgcolor: 'grey.100',
+                          display: 'grid',
+                          gridTemplateColumns: {
+                            xs: 'repeat(2, minmax(0, 1fr))',
+                            sm: 'repeat(4, minmax(0, 1fr))',
+                          },
+                          gap: 2,
                         }}
                       >
-                        <Avatar
-                          src={subscriber.image}
-                          alt={subscriber.name}
-                          sx={{
-                            width: 64,
-                            height: 64,
-                            mx: 'auto',
-                            mb: 1,
-                          }}
-                        />
+                        {project.participations.map(participant => (
+                          <Paper
+                            component="article"
+                            elevation={0}
+                            key={participant.id}
+                            sx={{
+                              p: 2,
+                              textAlign: 'center',
+                              borderRadius: 3,
+                              bgcolor: 'grey.100',
+                            }}
+                          >
+                            <Avatar
+                              src={participant.image ?? undefined}
+                              alt={participant.title ?? 'Участник'}
+                              sx={{
+                                width: 64,
+                                height: 64,
+                                mx: 'auto',
+                                mb: 1,
+                              }}
+                            />
 
-                        <Typography sx={{ fontWeight: 800 }}>{subscriber.name}</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {subscriber.age}
-                        </Typography>
-                      </Paper>
-                    ))}
-                  </Box>
-                </Stack>
-              </CardContent>
-            </Card>
+                            <Typography sx={{ fontWeight: 800 }}>
+                              {participant.title ?? 'Без имени'}
+                            </Typography>
 
-            <Button
-              type="submit"
-              variant="contained"
-              size="large"
-              startIcon={<SaveIcon />}
-              sx={{
-                alignSelf: { xs: 'stretch', sm: 'flex-end' },
-                px: 4,
-                py: 1.25,
-                borderRadius: 3,
-                fontWeight: 800,
-              }}
-            >
-              Сохранить изменения
-            </Button>
-          </Stack>
-        </Box>
+                            {participant.age !== null && participant.age !== undefined && (
+                              <Typography variant="body2" color="text.secondary">
+                                {participant.age} лет
+                              </Typography>
+                            )}
+                          </Paper>
+                        ))}
+                      </Box>
+                    ) : (
+                      <Typography color="text.secondary">Пока нет участников.</Typography>
+                    )}
+                  </Stack>
+                </CardContent>
+              </Card>
+            }
+          />
+        )}
       </Container>
     </Box>
   );

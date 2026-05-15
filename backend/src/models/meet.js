@@ -157,8 +157,6 @@ Meet.createByTimer = function (timer, result) {
             projectId: project.id,
             latitude: project.latitude,
             longitude: project.longitude,
-            ageFrom: project.ageFrom,
-            ageTo: project.ageTo,
         }
         dbConn.query("INSERT INTO meet set ?", data, function (err, res) {
             console.log(err, "err");

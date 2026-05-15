@@ -10,6 +10,7 @@ const S3 = require('../s3');
 
 // Загрузка картинки
 exports.upload = function(req, res) {
+  console.log('ПОшла загрузка')
     let form = new formidable.IncomingForm();
     form.parse(req, async function (error, fields, files) {
         const file = files.image

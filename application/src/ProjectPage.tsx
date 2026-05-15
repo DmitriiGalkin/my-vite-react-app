@@ -359,7 +359,7 @@ function ProjectPage() {
                                   <AvatarGroup max={5}>
                                     {(meeting?.visits || []).map(visit => (
                                       <Avatar
-                                        src={visit.user.image}
+                                        src={visit.user.image || undefined}
                                         alt="Участник"
                                         key={visit.user.id}
                                       />

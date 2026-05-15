@@ -14,10 +14,20 @@ var Meet = function(data){
 };
 
 Meet.create = function (data, result) {
-    dbConn.query("INSERT INTO meet set ?", data, function (err, res) {
-        console.log(err, "err");
-        result(err, res.insertId);
-    });
+  dbConn.query(
+    'INSERT INTO meet (projectId, price, duration, startedAt) VALUES (?, ?, ?, ?)',
+    [data.projectId, data.price, data.duration, data.startedAt],
+    function (err, res) {
+      console.log(err, 'err');
+
+      if (err) {
+        result(err);
+        return;
+      }
+
+      result(null, res.insertId);
+    },
+  );
 };
 
 Meet.update = function(id, meet, result){
@@ -74,7 +84,7 @@ Meet.findRecommendationByProjectId = function (id, result) {
 
 Meet.findByUserId = function (id, result) {
     dbConn.query(
-      "SELECT meet.*, date_format(startedAt, '%Y-%m-%d %H:%i:%s') as startedAt FROM meet LEFT JOIN participation ON participation.projectId = meet.projectId WHERE participation.userId = ? AND deleted IS NULL AND DATE(datetime) >= CURDATE()",
+      "SELECT meet.*, date_format(startedAt, '%Y-%m-%d %H:%i:%s') as startedAt FROM meet LEFT JOIN participation ON participation.projectId = meet.projectId WHERE participation.userId = ? AND deletedAt IS NULL AND DATE(startedAt) >= CURDATE()",
       id,
       function (err, res) {
         result(null, res || []);
@@ -147,42 +157,17 @@ function toODBC (l) {
 
 Meet.check = function (timer, result) {
     const day = toODBC(timer.dayOfWeek)
-    dbConn.query("SELECT *, DAYOFWEEK(datetime) as pm FROM meet WHERE DATE(datetime) >= CURDATE() AND DAYOFWEEK(datetime) = ? AND projectId = ?", [day, timer.projectId], function (err, res) {
+    dbConn.query(
+      'SELECT *, DAYOFWEEK(startedAt) as pm FROM meet WHERE DATE(startedAt) >= CURDATE() AND DAYOFWEEK(startedAt) = ? AND projectId = ?',
+      [day, timer.projectId],
+      function (err, res) {
         if (!res.length) {
-            result(null, timer);
+          result(null, timer);
         } else {
-            result(null);
+          result(null);
         }
-    });
+      },
+    );
 };
-
-// Встреча по номеру
-Meet.createByTimer = function (timer, result) {
-    Project.findById(timer.projectId, function(err, project) {
-        const correctDayOfWeek = timer.dayOfWeek + 1
-        const sevenDays = [0,1,2,3,4,5,6].map(number => {
-            return LocalDateTime.now().plusDays(number).withHour(timer.time)
-        })
-
-        const data = {
-            title: project.title,
-            description: project.description,
-            image: project.image,
-            datetime: sevenDays.find(d=>d.dayOfWeek().value()===correctDayOfWeek).truncatedTo(ChronoUnit.HOURS).toString(),
-            userId: project.userId,
-            projectId: project.id,
-            latitude: project.latitude,
-            longitude: project.longitude,
-        }
-        dbConn.query("INSERT INTO meet set ?", data, function (err, res) {
-            console.log(err, "err");
-            result(err, res.insertId);
-        });
-    })
-};
-
-
-
-
 
 module.exports = Meet;

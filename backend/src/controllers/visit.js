@@ -1,7 +1,6 @@
 'use strict';
 const async = require("async");
 const Meet = require('../models/meet');
-const User = require('../models/user');
 const Visit = require('../models/visit');
 const Project = require('../models/project');
 const Place = require('../models/place');
@@ -25,7 +24,7 @@ exports.create = function(req, res) {
 exports.delete = function(req, res) {
     Visit.findById(req.params.id, function(err, visit) {
         if (err) { return res.json({error:true,message:"Участие не существует"}); }
-        Meet.findById(visit.meetId, function(err, meet) {
+        Meet.findById(visit.meetId, function(err) {
             if (err) { return res.json({ error: true, message: "Встреча не найдена" }); }
             if (!req.users.map(u=>u.id).includes(visit.userId)) { return res.json({ error: true, message: "Нет прав на удаление" }); }
             Visit.delete( req.params.id, function() {

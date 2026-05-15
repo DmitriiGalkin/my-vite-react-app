@@ -33,7 +33,7 @@ exports.googleLogin = function(req, res) {
             if(req.body.constructor === Object && Object.keys(req.body).length === 0){
                 res.status(400).send({ error:true, message: 'Сбой конструктора участника при создании участника через гугл' });
             } else {
-                Passport.create(passport, function(err, data) {
+                Passport.create(passport, function() {
                     res.send({ error: false, message: "Участник создан" });
                 });
             }

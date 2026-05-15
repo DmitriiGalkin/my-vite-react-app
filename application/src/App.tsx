@@ -35,7 +35,7 @@ import CreateProjectPage from './CreateProjectPage';
 import EditProjectPage from './EditProjectPage';
 import PlaceSelectPage from './PlaceSelectPage';
 import './App.css';
-import type { Meet, Passport, Project, User } from './types';
+import type { Passport, Project, User } from './types';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from './api.ts';
 

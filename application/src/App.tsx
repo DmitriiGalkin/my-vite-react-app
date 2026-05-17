@@ -204,7 +204,10 @@ function HomePage() {
               <List disablePadding>
                 <ListItemButton
                   component={Link}
-                  to="/project/create"
+                  to="/chat?target=idea"
+                  onClick={() => {
+                    localStorage.removeItem('active_chat_id');
+                  }}
                   sx={{
                     mb: 1,
                     borderRadius: 2,

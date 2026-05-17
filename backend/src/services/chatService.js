@@ -30,11 +30,11 @@ async function getOrCreateChat({ chatId, passportId, firstMessage }) {
     return existingChat;
   }
 
-  const activeChat = await callModel(Chat.findActiveByPassportId, passportId);
-
-  if (activeChat) {
-    return activeChat;
-  }
+  // const activeChat = await callModel(Chat.findActiveByPassportId, passportId);
+  //
+  // if (activeChat) {
+  //   return activeChat;
+  // }
 
   const title = firstMessage.length > 80 ? `${firstMessage.slice(0, 80)}...` : firstMessage;
 

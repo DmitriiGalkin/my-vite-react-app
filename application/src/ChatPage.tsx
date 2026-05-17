@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   AppBar,
   Avatar,
@@ -27,6 +27,9 @@ declare global {
 }
 
 function ChatPage() {
+  const [searchParams] = useSearchParams();
+  const target = searchParams.get('target');
+
   const [message, setMessage] = useState('');
   const [chatId, setChatId] = useState<number | null>(() => {
     const savedChatId = localStorage.getItem('active_chat_id');
@@ -198,7 +201,7 @@ function ChatPage() {
         }}
       >
         <Stack spacing={2} sx={{ flexGrow: 1 }}>
-          <ChatWelcome />
+          {(target === 'idea') && <ChatWelcome />}
 
           {isMessagesLoading && (
             <Typography color="text.secondary" sx={{ alignSelf: 'center' }}>

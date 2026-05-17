@@ -15,6 +15,8 @@ const {
   findLastProjectIdea,
   createProjectFromIdea,
 } = require('../services/projectIdeaService');
+const Project = require('../models/project');
+const { generateProjectImage } = require('../services/imageGenerationService');
 
 exports.createMessage = async function (req, res) {
   try {
@@ -28,7 +30,7 @@ exports.createMessage = async function (req, res) {
     const message = String(req.body.message || '').trim();
     const chatId = req.body.chatId || null;
     const source = req.body.source === 'voice' ? 'voice' : 'text';
-
+    console.log(chatId, 'chatId START');
     if (!message) {
       return res.status(400).json({
         error: true,
@@ -102,6 +104,21 @@ exports.createMessage = async function (req, res) {
       chat,
       passport: req.passport,
     });
+
+
+    let image = null;
+
+
+    // try {
+    //   image =
+    //     assistantContent.status === 'idea_ready'
+    //       ? await generateProjectImage(assistantContent.idea)
+    //       : null;
+    // } catch (err) {
+    //   console.error('generateProjectImage error:', err);
+    // }
+
+    console.log(image,'image')
 
     const assistantMessage = await createAssistantMessage({
       chatId: chat.id,

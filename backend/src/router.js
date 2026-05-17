@@ -95,9 +95,6 @@ router.delete('/meet/:id', passportController.usePassport, meet.delete );
  */
 router.get('/visits', passportController.usePassport, visit.findAll);
 router.post('/visit', passportController.usePassport, visit.create );
-router.post('/visit/:id/started', passportController.usePassport, visit.started );
-router.post('/visit/:id/stopped', passportController.usePassport, visit.stopped );
-router.post('/visit/:id/paided', passportController.usePassport, visit.paided );
 router.delete('/visit/:id', passportController.usePassport, visit.delete );
 
 /**

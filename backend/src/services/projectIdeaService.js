@@ -43,11 +43,13 @@ function findLastProjectIdea(messages) {
 }
 
 async function createProjectFromIdea({ idea, passportId }) {
+  let image = idea.image || null;
+
   return callModel(Project.create, {
     passportId,
     title: idea.title || 'Идея проекта',
     description: idea.description || '',
-    image: idea.image || null,
+    image,
     placeId: idea.placeId || null,
   });
 }

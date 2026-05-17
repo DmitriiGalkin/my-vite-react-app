@@ -14,17 +14,11 @@ import {
   Typography,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { useQuery } from '@tanstack/react-query';
-import { apiFetch } from './api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import ProjectForm, { type ProjectFormValues } from './ProjectForm';
-import type { Place, Project, User } from './types';
+import { type ExtendedProject, fetchProject, updateProject } from './requests';
 
-interface ProjectDetails extends Project {
-  place?: Place | null;
-  participations?: User[];
-}
-
-function toFormValues(project: ProjectDetails): ProjectFormValues {
+function toFormValues(project: ExtendedProject): ProjectFormValues {
   return {
     title: project.title ?? '',
     description: project.description ?? '',
@@ -35,8 +29,8 @@ function toFormValues(project: ProjectDetails): ProjectFormValues {
 function EditProjectPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const queryClient = useQueryClient();
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const projectId = id ? Number(id) : null;
@@ -47,38 +41,32 @@ function EditProjectPage() {
     isError,
   } = useQuery({
     queryKey: ['project', projectId],
-    queryFn: () => apiFetch<ProjectDetails>(`/project/${projectId}`),
+    queryFn: () => fetchProject(String(projectId)),
     enabled: projectId !== null && !Number.isNaN(projectId),
   });
 
-  async function handleSubmit(values: ProjectFormValues) {
-    if (!projectId) {
-      setSubmitError('Не удалось определить номер проекта.');
-      return;
-    }
+  const updateProjectMutation = useMutation({
+    mutationFn: (values: ProjectFormValues) => {
+      if (!projectId) {
+        throw new Error('Не удалось определить номер проекта.');
+      }
 
-    setIsSubmitting(true);
-    setSubmitError(null);
-
-    try {
-      await apiFetch(`/project/${projectId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: values.title,
-          description: values.description,
-          image: values.image || null,
-        }),
-      });
-
+      return updateProject(projectId, values);
+    },
+    onMutate: () => {
+      setSubmitError(null);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       navigate(`/project/${projectId}`);
-    } catch {
+    },
+    onError: () => {
       setSubmitError('Не удалось сохранить изменения. Попробуйте ещё раз.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    },
+  });
+
+  function handleSubmit(values: ProjectFormValues) {
+    updateProjectMutation.mutate(values);
   }
 
   if (!projectId || Number.isNaN(projectId)) {
@@ -118,7 +106,7 @@ function EditProjectPage() {
             submitButtonText="Сохранить изменения"
             submittingButtonText="Сохраняем..."
             placeSelectPath={`/project/${project.id}/edit/place`}
-            isSubmitting={isSubmitting}
+            isSubmitting={updateProjectMutation.isPending}
             submitError={submitError}
             onSubmit={handleSubmit}
             placeInfo={

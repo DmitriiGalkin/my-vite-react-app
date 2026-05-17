@@ -1,42 +1,35 @@
-import { useEffect, useRef, useState } from 'react'
-import type { Map as LeafletMap, Marker as LeafletMarker } from 'leaflet'
-import 'leaflet/dist/leaflet.css'
-import { useNavigate } from 'react-router-dom'
-import './PlaceSelectPage.css'
-import type {Place} from "./types.ts";
-import {apiFetch} from "./api.ts";
-import {useQuery} from "@tanstack/react-query";
-
-async function fetchPlaces(): Promise<Place[]> {
-  return apiFetch<Place[]>('/places')
-}
+import { useEffect, useRef, useState } from 'react';
+import type { Map as LeafletMap, Marker as LeafletMarker } from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { useNavigate } from 'react-router-dom';
+import './PlaceSelectPage.css';
+import { useQuery } from '@tanstack/react-query';
+import { fetchPlaces } from './requests';
 
 function PlaceSelectPage() {
-  const navigate = useNavigate()
-  const mapRef = useRef<HTMLDivElement | null>(null)
-  const mapInstanceRef = useRef<LeafletMap | null>(null)
-  const markersRef = useRef<LeafletMarker[]>([])
-  const [selectedPlaceId, setSelectedPlaceId] = useState<number | null>(null)
+  const navigate = useNavigate();
+  const mapRef = useRef<HTMLDivElement | null>(null);
+  const mapInstanceRef = useRef<LeafletMap | null>(null);
+  const markersRef = useRef<LeafletMarker[]>([]);
+  const [selectedPlaceId, setSelectedPlaceId] = useState<number | null>(null);
 
-  const {
-    data: places = [],
-  } = useQuery({
+  const { data: places = [] } = useQuery({
     queryKey: ['places'],
     queryFn: fetchPlaces,
-  })
+  });
 
   useEffect(() => {
-    let isMounted = true
+    let isMounted = true;
 
     async function initMap() {
       if (!mapRef.current || mapInstanceRef.current) {
-        return
+        return;
       }
 
-      const { default: L } = await import('leaflet')
+      const { default: L } = await import('leaflet');
 
       if (!isMounted || !mapRef.current) {
-        return
+        return;
       }
 
       const placeIcon = L.divIcon({
@@ -45,122 +38,120 @@ function PlaceSelectPage() {
         iconSize: [38, 38],
         iconAnchor: [19, 38],
         popupAnchor: [0, -36],
-      })
+      });
 
       const map = L.map(mapRef.current, {
         center: [55.755864, 37.617698],
         zoom: 12,
         zoomControl: true,
-      })
+      });
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
         maxZoom: 19,
-      }).addTo(map)
+      }).addTo(map);
 
-      mapInstanceRef.current = map
+      mapInstanceRef.current = map;
 
-      markersRef.current = places.map((place) => {
+      markersRef.current = places.map(place => {
         const marker = L.marker([place.latitude, place.longitude], {
           icon: placeIcon,
           title: place.title,
-        })
-            .addTo(map)
-            .bindPopup(`
+        }).addTo(map).bindPopup(`
           <div class="place-popup">
             <strong>${place.title}</strong>
             <span>${place.address}</span>
           </div>
-        `)
+        `);
 
         marker.on('click', () => {
-          setSelectedPlaceId(place.id)
-          map.setView([place.latitude, place.longitude], 14)
-        })
+          setSelectedPlaceId(place.id);
+          map.setView([place.latitude, place.longitude], 14);
+        });
 
-        return marker
-      })
+        return marker;
+      });
     }
 
-    initMap()
+    initMap();
 
     return () => {
-      isMounted = false
-      markersRef.current.forEach((marker) => marker.remove())
-      markersRef.current = []
-      mapInstanceRef.current?.remove()
-      mapInstanceRef.current = null
-    }
-  }, [])
+      isMounted = false;
+      markersRef.current.forEach(marker => marker.remove());
+      markersRef.current = [];
+      mapInstanceRef.current?.remove();
+      mapInstanceRef.current = null;
+    };
+  }, []);
 
   const handlePlaceClick = (placeId: number) => {
-    const place = places.find((place) => place.id === placeId)
+    const place = places.find(place => place.id === placeId);
 
     if (!place) {
-      return
+      return;
     }
 
-    setSelectedPlaceId(place.id)
+    setSelectedPlaceId(place.id);
 
-    mapInstanceRef.current?.setView([place.latitude, place.longitude], 14)
+    mapInstanceRef.current?.setView([place.latitude, place.longitude], 14);
 
-    const marker = markersRef.current.find((marker) => {
-      const position = marker.getLatLng()
+    const marker = markersRef.current.find(marker => {
+      const position = marker.getLatLng();
 
-      return position.lat === place.latitude && position.lng === place.longitude
-    })
+      return position.lat === place.latitude && position.lng === place.longitude;
+    });
 
-    marker?.openPopup()
-  }
+    marker?.openPopup();
+  };
 
   return (
-      <main className="place-select-page">
-        <header className="place-select-header">
-          <button type="button" onClick={() => navigate(-1)} aria-label="Назад">
-            ←
-          </button>
-          <div>
-            <h1>Выбор места</h1>
-            <p>Выберите площадку для проведения проекта</p>
-          </div>
-        </header>
+    <main className="place-select-page">
+      <header className="place-select-header">
+        <button type="button" onClick={() => navigate(-1)} aria-label="Назад">
+          ←
+        </button>
+        <div>
+          <h1>Выбор места</h1>
+          <p>Выберите площадку для проведения проекта</p>
+        </div>
+      </header>
 
-        <section className="place-map-card">
-          <div className="place-map" ref={mapRef} />
-        </section>
+      <section className="place-map-card">
+        <div className="place-map" ref={mapRef} />
+      </section>
 
-        <section className="place-list">
-          <h2>Доступные места</h2>
+      <section className="place-list">
+        <h2>Доступные места</h2>
 
-          {places.map((place) => (
-              <article
-                  className={`place-card ${selectedPlaceId === place.id ? 'place-card-selected' : ''}`}
-                  key={place.id}
-              >
-                <button
-                    className="place-card-main"
-                    type="button"
-                    onClick={() => handlePlaceClick(place.id)}
-                >
-                  <span className="place-card-icon">📍</span>
+        {places.map(place => (
+          <article
+            className={`place-card ${selectedPlaceId === place.id ? 'place-card-selected' : ''}`}
+            key={place.id}
+          >
+            <button
+              className="place-card-main"
+              type="button"
+              onClick={() => handlePlaceClick(place.id)}
+            >
+              <span className="place-card-icon">📍</span>
 
-                  <span className="place-card-content">
+              <span className="place-card-content">
                 <strong>{place.title}</strong>
                 <small>{place.description}</small>
                 <em>{place.address}</em>
               </span>
-                </button>
+            </button>
 
-                <div className="place-card-action">
-                  <button type="button" onClick={() => navigate('/project/1/edit')}>
-                    Выбрать
-                  </button>
-                </div>
-              </article>
-          ))}
-        </section>
-      </main>
-  )
+            <div className="place-card-action">
+              <button type="button" onClick={() => navigate('/project/1/edit')}>
+                Выбрать
+              </button>
+            </div>
+          </article>
+        ))}
+      </section>
+    </main>
+  );
 }
 
-export default PlaceSelectPage
+export default PlaceSelectPage;

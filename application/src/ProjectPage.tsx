@@ -19,53 +19,9 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
-import EventIcon from '@mui/icons-material/Event';
-import PaymentsIcon from '@mui/icons-material/Payments';
-import ScheduleIcon from '@mui/icons-material/Schedule';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiFetch } from './api.ts';
-import type { Meet, Project, User } from './types';
-
-interface ExtendedMeet extends Meet {
-  visits?: {
-    id: number;
-    userId: number;
-    user: User;
-  }[];
-}
-interface ExtendedProject extends Project {
-  passport?: {
-    title: string;
-  };
-  place?: {
-    title: string;
-  };
-  meets?: ExtendedMeet[];
-  participations?: {
-    id: string;
-    image: string;
-  }[];
-}
-
-async function fetchProject(id: string): Promise<ExtendedProject> {
-  return apiFetch<ExtendedProject>(`/project/${id}`);
-}
-
-async function createVisit(meetId: number) {
-  return apiFetch('/visit', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ meetId, userId: 2 }),
-  });
-}
-
-async function deleteVisit(visitId: number) {
-  return apiFetch(`/visit/${visitId}`, {
-    method: 'DELETE',
-  });
-}
+import MeetCard from './MeetCard';
+import { createVisit, deleteVisit, fetchProject } from './requests.ts';
 
 function ProjectPage() {
   const navigate = useNavigate();
@@ -264,136 +220,21 @@ function ProjectPage() {
                 <Typography component="h2" variant="h4" sx={{ mb: 2.5, fontWeight: 900 }}>
                   Расписание
                 </Typography>
-
                 <Stack spacing={2}>
                   {(project?.meets || [])
                     .filter(meeting => !meeting.deletedAt)
-                    .map(meeting => {
-                          const startedAt = new Date(meeting.startedAt);
-                          const currentUserVisit = meeting.visits?.find(visit => visit.userId === 2);
-                          const isCurrentUserVisited = Boolean(currentUserVisit);
-                          const isVisitActionPending =
-                            createVisitMutation.isPending || deleteVisitMutation.isPending;
-
-                          return (
-                            <Paper
-                              component="article"
-                              elevation={0}
-                              key={meeting.id}
-                              sx={{
-                                p: 2,
-                                borderRadius: 3,
-                                border: 1,
-                                borderColor: 'divider',
-                              }}
-                            >
-                              <Stack
-                                direction={{ xs: 'column', md: 'row' }}
-                                spacing={2}
-                                sx={{
-                                  justifyContent: 'space-between',
-                                  alignItems: { xs: 'stretch', md: 'center' },
-                                }}
-                              >
-                                <Stack
-                                  direction={{ xs: 'column', sm: 'row' }}
-                                  spacing={2}
-                                  sx={{ flexGrow: 1 }}
-                                >
-                                  <Stack
-                                    direction="row"
-                                    spacing={1.25}
-                                    sx={{ minWidth: 140, alignItems: 'center' }}
-                                  >
-                                    <EventIcon color="primary" />
-                                    <Box>
-                                      <Typography variant="body2" color="text.secondary">
-                                        Дата
-                                      </Typography>
-                                      <Typography sx={{ fontWeight: 800 }}>
-                                        {startedAt.toLocaleDateString('ru-RU', {
-                                          day: 'numeric',
-                                          month: 'long',
-                                        })}
-                                      </Typography>
-                                    </Box>
-                                  </Stack>
-
-                                  <Stack
-                                    direction="row"
-                                    spacing={1.25}
-                                    sx={{ minWidth: 120, alignItems: 'center' }}
-                                  >
-                                    <ScheduleIcon color="primary" />
-                                    <Box>
-                                      <Typography variant="body2" color="text.secondary">
-                                        Время
-                                      </Typography>
-                                      <Typography sx={{ fontWeight: 800 }}>
-                                        {startedAt.toLocaleTimeString('ru-RU', {
-                                          hour: '2-digit',
-                                          minute: '2-digit',
-                                        })}
-                                      </Typography>
-                                    </Box>
-                                  </Stack>
-
-                                  <Stack
-                                    direction="row"
-                                    spacing={1.25}
-                                    sx={{ minWidth: 120, alignItems: 'center' }}
-                                  >
-                                    <PaymentsIcon color="primary" />
-                                    <Box>
-                                      <Typography variant="body2" color="text.secondary">
-                                        Цена
-                                      </Typography>
-                                      <Typography sx={{ fontWeight: 800 }}>
-                                        {meeting.price ? `${meeting.price} ₽` : 'Бесплатно'}
-                                      </Typography>
-                                    </Box>
-                                  </Stack>
-                                </Stack>
-
-                                <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
-                                  <AvatarGroup max={5}>
-                                    {(meeting?.visits || []).map(visit => (
-                                      <Avatar
-                                        src={visit.user.image || undefined}
-                                        alt="Участник"
-                                        key={visit.user.id}
-                                      />
-                                    ))}
-                                  </AvatarGroup>
-
-                                  <Chip label="+5 участников" color="primary" variant="outlined" />
-                                </Stack>
-
-                                <Button
-                                  variant="contained"
-                                  size="large"
-                                  disabled={isVisitActionPending}
-                                  onClick={() => {
-                                    if (currentUserVisit?.id) {
-                                      deleteVisitMutation.mutate(currentUserVisit.id);
-
-                                      return;
-                                    }
-
-                                    createVisitMutation.mutate(meeting.id);
-                                  }}
-                                >
-                                  {isVisitActionPending
-                                    ? 'Отправка...'
-                                    : isCurrentUserVisited
-                                      ? 'Выйти'
-                                      : 'Участвовать'}
-                                </Button>
-                              </Stack>
-                            </Paper>
-                          );
-                        })}
-                </Stack>
+                    .map(meeting => (
+                      <MeetCard
+                        meeting={meeting}
+                        key={meeting.id}
+                        isVisitActionPending={
+                          createVisitMutation.isPending || deleteVisitMutation.isPending
+                        }
+                        onCreateVisit={meetId => createVisitMutation.mutate(meetId)}
+                        onDeleteVisit={visitId => deleteVisitMutation.mutate(visitId)}
+                      />
+                    ))}
+                </Stack>{' '}
               </Box>
             </Stack>
           </CardContent>

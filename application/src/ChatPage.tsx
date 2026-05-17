@@ -4,9 +4,9 @@ import {
   AppBar,
   Avatar,
   Box,
+  Button,
   Container,
   IconButton,
-  Paper,
   Stack,
   TextField,
   Toolbar,
@@ -15,25 +15,10 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MicIcon from '@mui/icons-material/Mic';
 import SendIcon from '@mui/icons-material/Send';
-import { apiFetch } from './api';
 import ProjectCard from './ProjectCard';
+import Message from './Message';
 import type { Project } from './types';
-
-type ChatMessage = {
-  id: number;
-  chatId: number;
-  passportId: number | null;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  source: 'text' | 'voice';
-  metadata: unknown;
-  createdAt: string;
-};
-
-type SendMessageResponse = {
-  chatId: number;
-  messages: ChatMessage[];
-};
+import { fetchMessages, sendMessage, type ChatMessage } from './requests';
 
 function getProjectFromMetadata(metadata: unknown): Project | null {
   if (!metadata) {
@@ -96,6 +81,36 @@ function ChatPage() {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
+  async function sendChatMessage(text: string) {
+    const trimmedMessage = text.trim();
+
+    if (!trimmedMessage || isSending) {
+      return;
+    }
+
+    setIsSending(true);
+
+    try {
+      const response = await sendMessage({
+        chatId,
+        message: trimmedMessage,
+      });
+
+      setChatId(response.chatId);
+      localStorage.setItem('active_chat_id', String(response.chatId));
+      setMessages(currentMessages => [...currentMessages, ...response.messages]);
+
+      if (trimmedMessage === message.trim()) {
+        setMessage('');
+      }
+    } catch (error) {
+      console.log(error, 'error');
+      alert('Не удалось отправить сообщение. Попробуйте ещё раз.');
+    } finally {
+      setIsSending(false);
+    }
+  }
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
       behavior: 'smooth',
@@ -110,11 +125,11 @@ function ChatPage() {
 
     let isMounted = true;
 
-    async function fetchMessages() {
+    async function loadMessages() {
       setIsMessagesLoading(true);
 
       try {
-        const loadedMessages = await apiFetch<ChatMessage[]>(`/chat/${chatId}/messages`);
+        const loadedMessages = await fetchMessages(chatId);
 
         if (isMounted) {
           setMessages(loadedMessages);
@@ -128,12 +143,13 @@ function ChatPage() {
       }
     }
 
-    fetchMessages();
+    loadMessages();
 
     return () => {
       isMounted = false;
     };
   }, [chatId]);
+
   const handleMicrophoneClick = () => {
     if (isListening) {
       recognitionRef.current?.stop();
@@ -180,36 +196,7 @@ function ChatPage() {
   };
 
   const handleSendMessage = async () => {
-    const trimmedMessage = message.trim();
-
-    if (!trimmedMessage || isSending) {
-      return;
-    }
-
-    setIsSending(true);
-
-    try {
-      const response = await apiFetch<SendMessageResponse>('/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chatId,
-          message: trimmedMessage,
-        }),
-      });
-
-      setChatId(response.chatId);
-      localStorage.setItem('active_chat_id', String(response.chatId));
-      setMessages(currentMessages => [...currentMessages, ...response.messages]);
-      setMessage('');
-    } catch (error) {
-      console.log(error, 'error');
-      alert('Не удалось отправить сообщение. Попробуйте ещё раз.');
-    } finally {
-      setIsSending(false);
-    }
+    await sendChatMessage(message);
   };
 
   return (
@@ -252,61 +239,36 @@ function ChatPage() {
         }}
       >
         <Stack spacing={2} sx={{ flexGrow: 1 }}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 2,
-              alignSelf: 'flex-start',
-              maxWidth: '80%',
-              borderRadius: 4,
-              border: 1,
-              borderColor: 'divider',
-              bgcolor: 'white',
-              overflow: 'hidden',
-            }}
-          >
-            <Stack spacing={2}>
-              <Box
-                component="img"
-                src="/parent.svg"
-                alt="Воплощаем идеи детских проектов"
-                sx={{
-                  width: '100%',
-                  maxHeight: 220,
-                  objectFit: 'cover',
-                  borderRadius: 3,
-                }}
-              />
+          <Stack spacing={2}>
+            <Box
+              component="img"
+              src="/parent.svg"
+              alt="Воплощаем идеи детских проектов"
+              sx={{
+                width: '100%',
+                maxHeight: 220,
+                objectFit: 'cover',
+                borderRadius: 3,
+              }}
+            />
 
-              <Box>
-                <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>
-                  Воплощаем идеи детских проектов
-                </Typography>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>
+                Воплощаем идеи детских проектов
+              </Typography>
 
-                <Typography color="text.secondary">
-                  Даем возможность придумать свой собственный проект. Помогаем подбирать для ребенка
-                  интересные проекты, секции, кружки и мастер классы.
-                </Typography>
-              </Box>
-            </Stack>
-          </Paper>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 2,
-              alignSelf: 'flex-start',
-              maxWidth: '80%',
-              borderRadius: 4,
-              border: 1,
-              borderColor: 'divider',
-              bgcolor: 'white',
-              overflow: 'hidden',
-            }}
-          >
+              <Typography color="text.secondary">
+                Даем возможность придумать свой собственный проект. Помогаем подбирать для ребенка
+                интересные проекты, секции, кружки и мастер классы. Гении всегда делятся идеями
+              </Typography>
+            </Box>
+          </Stack>
+
+          <Message role="assistant">
             <Typography color="text.secondary">
               Расскажите поподробнее идею проекта вашего ребенка. В чем она заключается ?
             </Typography>
-          </Paper>
+          </Message>
 
           {isMessagesLoading && (
             <Typography color="text.secondary" sx={{ alignSelf: 'center' }}>
@@ -314,38 +276,46 @@ function ChatPage() {
             </Typography>
           )}
 
-              {messages.map(chatMessage => {
+              {messages.map((chatMessage, index) => {
                 const project = getProjectFromMetadata(chatMessage.metadata);
+                const isLastMessage = index === messages.length - 1;
 
                 return (
-                  <Paper
+                  <Box
                     key={chatMessage.id}
-                    elevation={0}
                     sx={{
-                      p: 2,
                       alignSelf: chatMessage.role === 'user' ? 'flex-end' : 'flex-start',
-                      maxWidth: '80%',
-                      borderRadius: chatMessage.role === 'user' ? '16px 16px 0 16px' : '16px 16px 16px 0 ',
-                      border: chatMessage.role === 'user' ? 0 : 1,
-                      borderColor: 'divider',
-                      bgcolor: chatMessage.role === 'user' ? '#FFB628' : 'white',
-                      color: chatMessage.role === 'user' ? '#111827' : 'text.primary',
                     }}
                   >
-                    <Typography>{chatMessage.content}</Typography>
+                    <Message role={chatMessage.role}>
+                      <Typography>{chatMessage.content}</Typography>
+                    </Message>
 
                     {project && (
                       <Box sx={{ mt: 2 }}>
                         <ProjectCard project={project} />
+
+                        {isLastMessage && (
+                          <Button
+                            variant="contained"
+                            fullWidth
+                            disabled={isSending}
+                            sx={{ mt: 1.5 }}
+                            onClick={() => {
+                              sendChatMessage('Создать идею проекта');
+                            }}
+                          >
+                            {isSending ? 'Отправляем...' : 'Создать идею проекта'}
+                          </Button>
+                        )}
                       </Box>
                     )}
-                  </Paper>
+                  </Box>
                 );
               })}
-
               <Box ref={messagesEndRef} />
-            </Stack>
-          </Container>
+        </Stack>
+      </Container>
 
       <Box
         component="footer"

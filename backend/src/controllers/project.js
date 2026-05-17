@@ -1,5 +1,5 @@
 'use strict';
-const async = require('async');
+
 const Project = require('../models/project');
 const User = require('../models/user');
 const Passport = require('../models/passport');
@@ -7,92 +7,107 @@ const Visit = require('../models/visit');
 const Meet = require('../models/meet');
 const Place = require('../models/place');
 const Participation = require('../models/participation');
+const callModel = require('../utils/callModel');
 
-exports.create = function (req, res) {
-  const project = new Project({ ...req.body, passportId: req.passport?.id });
-  Project.create(project, function (err, projectId) {
-    res.json(projectId);
-  });
-};
-
-exports.update = function (req, res) {
-  const obj = new Project(req.body);
-  Project.update(req.params.id, obj, function () {
-    res.json({ error: false, message: 'Проект обновлен' });
-  });
-};
-exports.delete = function (req, res) {
-  Project.findById(req.params.id, function (err, project) {
-    if (err) res.json({ error: true, message: 'Проект с данным номером не существует' });
-    if (project.passportId !== req.passport.id)
-      res.json({
-        error: true,
-        message: 'Вы не владелец проекта, чтобы принимать решение по удалению',
-      });
-
-    Meet.findByProjectId(project.id, function (err, meets) {
-      async.map(
-        meets.map(m => m.id),
-        Meet.delete,
-        function () {
-          Project.delete(project.id, function () {
-            res.json({ error: false, message: 'Проект удален' });
-          });
-        },
-      );
-    });
-  });
-};
-
-exports.findAll = async (req, res) => {
-  console.log(req.passport, 'req.passport');
+exports.create = async function (req, res) {
   try {
-    Project.findAll({ ...req.query, passportId: req.passport?.id }, function (err, projects) {
-      console.log(projects, 'projects');
-      async.map(
-        projects.map(p => p.placeId),
-        Place.findById,
-        function (err, places) {
-          async.map(
-            projects.map(p => p.id),
-            Participation.findByProjectId,
-            function (err, participations) {
-              async.map(
-                projects.map(p => p.id),
-                Meet.findRecommendationByProjectId,
-                function (err, recommendMeets) {
-                  res.send(
-                    projects.map((p, index) => ({
-                      ...p,
-                      place: places[index],
-                      participations: participations[index],
-                      recommendMeet: recommendMeets[index],
-                    })),
-                  );
-                },
-              );
-            },
-          );
-        },
-      );
-    });
+    const project = new Project({ ...req.body, passportId: req.passport?.id });
+    const projectId = await callModel(Project.create, project);
+
+    res.json(projectId);
   } catch (err) {
-    res.end('error page');
+    console.error('project.create error:', err);
+
+    res.status(500).json({
+      error: true,
+      message: 'Не удалось создать проект',
+    });
   }
 };
 
-function callModel(method, ...args) {
-  return new Promise((resolve, reject) => {
-    method(...args, function (err, result) {
-      if (err) {
-        reject(err);
-        return;
-      }
+exports.update = async function (req, res) {
+  try {
+    const obj = new Project(req.body);
 
-      resolve(result);
+    await callModel(Project.update, req.params.id, obj);
+
+    res.json({ error: false, message: 'Проект обновлен' });
+  } catch (err) {
+    console.error('project.update error:', err);
+
+    res.status(500).json({
+      error: true,
+      message: 'Не удалось обновить проект',
     });
-  });
-}
+  }
+};
+
+exports.delete = async function (req, res) {
+  try {
+    const project = await callModel(Project.findById, req.params.id);
+
+    if (!project) {
+      return res.json({
+        error: true,
+        message: 'Проект с данным номером не существует',
+      });
+    }
+
+    if (project.passportId !== req.passport.id) {
+      return res.json({
+        error: true,
+        message: 'Вы не владелец проекта, чтобы принимать решение по удалению',
+      });
+    }
+
+    const meets = await callModel(Meet.findByProjectId, project.id);
+
+    await Promise.all(meets.map(meet => callModel(Meet.delete, meet.id)));
+    await callModel(Project.delete, project.id);
+
+    res.json({ error: false, message: 'Проект удален' });
+  } catch (err) {
+    console.error('project.delete error:', err);
+
+    res.status(500).json({
+      error: true,
+      message: 'Не удалось удалить проект',
+    });
+  }
+};
+
+exports.findAll = async function (req, res) {
+  try {
+    const projects = await callModel(Project.findAll, {
+      ...req.query,
+      passportId: req.passport?.id,
+    });
+
+    const [places, participations, recommendMeets] = await Promise.all([
+      Promise.all(projects.map(project => callModel(Place.findById, project.placeId))),
+      Promise.all(projects.map(project => callModel(Participation.findByProjectId, project.id))),
+      Promise.all(
+        projects.map(project => callModel(Meet.findRecommendationByProjectId, project.id)),
+      ),
+    ]);
+
+    res.send(
+      projects.map((project, index) => ({
+        ...project,
+        place: places[index],
+        participations: participations[index],
+        recommendMeet: recommendMeets[index],
+      })),
+    );
+  } catch (err) {
+    console.error('project.findAll error:', err);
+
+    res.status(500).json({
+      error: true,
+      message: 'Не удалось получить проекты',
+    });
+  }
+};
 
 exports.findById = async function (req, res) {
   try {
@@ -111,7 +126,7 @@ exports.findById = async function (req, res) {
       callModel(Participation.findByProjectId, project.id),
       callModel(Meet.findByProjectId, project.id),
     ]);
-    console.log(participations, 'participations');
+
     const [users, visits, visitUsers] = await Promise.all([
       Promise.all(
         participations.map(participation => callModel(User.findById, participation.userId)),
@@ -132,11 +147,12 @@ exports.findById = async function (req, res) {
         })),
       })),
       participations: participations.map((participation, participationIndex) => ({
-        ...users[participationIndex],
+        ...participation,
+        user: users[participationIndex],
       })),
     });
   } catch (err) {
-    console.error(err);
+    console.error('project.findById error:', err);
 
     res.status(500).send({
       error: true,
@@ -145,9 +161,16 @@ exports.findById = async function (req, res) {
   }
 };
 
-exports.meta = function (req, res) {
-  Project.findById(req.params.id, function (err, project) {
-    if (err) return res.json({ error: true, message: 'Проект не существует' });
+exports.meta = async function (req, res) {
+  try {
+    const project = await callModel(Project.findById, req.params.id);
+
+    if (!project) {
+      return res.status(404).json({
+        error: true,
+        message: 'Проект не существует',
+      });
+    }
 
     res.json({
       title: project.title + ' | Quantum',
@@ -158,5 +181,12 @@ exports.meta = function (req, res) {
       ogDescription: project.description,
       ogImage: project.image,
     });
-  });
+  } catch (err) {
+    console.error('project.meta error:', err);
+
+    res.status(500).json({
+      error: true,
+      message: 'Не удалось получить meta проекта',
+    });
+  }
 };

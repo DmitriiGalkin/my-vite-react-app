@@ -1,38 +1,95 @@
 'use strict';
-const User = require('../models/user');
-const Passport = require('../models/passport');
-const Participation = require('../models/participation');
 
-exports.create = function(req, res) {
-    const user = new User({...req.body, passportId: req.passport.id });
-    User.create(user, function(err, userId) {
-        res.json(userId);
+const User = require('../models/user');
+const Participation = require('../models/participation');
+const callModel = require('../utils/callModel');
+
+exports.create = async function (req, res) {
+  try {
+    const user = new User({
+      ...req.body,
+      passportId: req.passport.id,
     });
+
+    const userId = await callModel(User.create, user);
+
+    res.json(userId);
+  } catch (err) {
+    console.error('user.create error:', err);
+
+    res.status(500).json({
+      error: true,
+      message: 'Не удалось создать участника',
+    });
+  }
 };
 
 // Обновление участника
-exports.update = function(req, res) {
-    User.update(new User(req.body), function() {
-        res.json({ error:false, message: 'Обновление участника' });
+exports.update = async function (req, res) {
+  try {
+    await callModel(User.update, new User(req.body));
+
+    res.json({
+      error: false,
+      message: 'Обновление участника',
     });
+  } catch (err) {
+    console.error('user.update error:', err);
+
+    res.status(500).json({
+      error: true,
+      message: 'Не удалось обновить участника',
+    });
+  }
 };
 
-exports.delete = function(req, res) {
-    User.findById(req.params.id, function(err, user) {
-        if (err) { return res.json({error:true,message: "Ребенок не существует"}); }
-        if (user.passportId !== req.passport.id) { return res.json({ error: true, message: "Нет прав на удаление" }); }
+exports.delete = async function (req, res) {
+  try {
+    const user = await callModel(User.findById, req.params.id);
 
-        Participation.deleteByUserId(user.id, function () {
-            User.delete( req.params.id, function() {
-                res.json({ error:false, message: 'Удаление участника и его участий в проектах' });
-            });
-        });
-    })
+    if (!user) {
+      return res.json({
+        error: true,
+        message: 'Ребенок не существует',
+      });
+    }
+
+    if (user.passportId !== req.passport.id) {
+      return res.json({
+        error: true,
+        message: 'Нет прав на удаление',
+      });
+    }
+
+    await callModel(Participation.deleteByUserId, user.id);
+    await callModel(User.delete, req.params.id);
+
+    res.json({
+      error: false,
+      message: 'Удаление участника и его участий в проектах',
+    });
+  } catch (err) {
+    console.error('user.delete error:', err);
+
+    res.status(500).json({
+      error: true,
+      message: 'Не удалось удалить участника',
+    });
+  }
 };
 
 // Участник
-exports.findById = function(req, res) {
-    User.findById(req.params.id, function(err, user) {
-        res.send(user);
+exports.findById = async function (req, res) {
+  try {
+    const user = await callModel(User.findById, req.params.id);
+
+    res.send(user);
+  } catch (err) {
+    console.error('user.findById error:', err);
+
+    res.status(500).json({
+      error: true,
+      message: 'Не удалось получить участника',
     });
+  }
 };

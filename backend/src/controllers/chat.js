@@ -1,6 +1,7 @@
 'use strict';
 const Chat = require('../models/chat');
 const ChatMessage = require('../models/chatMessage');
+const Project = require('../models/project');
 
 const CLOUD_RU_AGENT_CARD_URL =
   process.env.CLOUD_RU_AGENT_CARD_URL ||
@@ -30,6 +31,69 @@ function normalizeMessage(row) {
     metadata: row.metadata,
     createdAt: row.createdAt,
   };
+}
+
+function isCreateProjectIdeaCommand(message) {
+  const normalizedMessage = message.trim().toLowerCase();
+
+  return [
+    'создать идею проекта',
+    'создай идею проекта',
+    'создать проект',
+    'создай проект',
+  ].includes(normalizedMessage);
+}
+
+function parseMetadata(metadata) {
+  if (!metadata) {
+    return null;
+  }
+
+  if (typeof metadata === 'object') {
+    return metadata;
+  }
+
+  try {
+    return JSON.parse(metadata);
+  } catch {
+    return null;
+  }
+}
+
+function findLastProjectIdea(messages) {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const metadata = parseMetadata(messages[index].metadata);
+
+    if (metadata?.title || metadata?.description) {
+      return metadata;
+    }
+  }
+
+  return null;
+}
+
+async function createProjectFromIdea({ idea, passportId }) {
+  return callModel(Project.create, {
+    passportId,
+    title: idea.title || 'Идея проекта',
+    description: idea.description || '',
+    image: idea.image || null,
+    placeId: idea.placeId || null,
+  });
+}
+
+
+async function createAssistantMessage({ chatId, content, metadata = null }) {
+  const assistantMessageId = await callModel(ChatMessage.create, {
+    chatId,
+    passportId: null,
+    role: 'assistant',
+    content,
+    metadata,
+    source: 'text',
+  });
+
+  return callModel(ChatMessage.findById, assistantMessageId);
 }
 
 async function getOrCreateChat({ chatId, passportId, firstMessage }) {
@@ -179,6 +243,52 @@ exports.createMessage = async function (req, res) {
 
     const recentMessages = await callModel(ChatMessage.findLastByChatId, chat.id, 10);
 
+    if (isCreateProjectIdeaCommand(message)) {
+      const idea = findLastProjectIdea(recentMessages);
+
+      if (!idea) {
+        const [userMessage, assistantMessage] = await Promise.all([
+          callModel(ChatMessage.findById, userMessageId),
+          createAssistantMessage({
+            chatId: chat.id,
+            content: 'Не нашёл готовую идею проекта в переписке. Давайте сначала сформулируем её.',
+          }),
+        ]);
+
+        await callModel(Chat.touch, chat.id);
+
+        return res.json({
+          chatId: chat.id,
+          messages: [normalizeMessage(userMessage), normalizeMessage(assistantMessage)],
+        });
+      }
+
+      const createdProjectId = await createProjectFromIdea({
+        idea,
+        passportId: req.passport.id,
+      });
+
+      const [userMessage, assistantMessage] = await Promise.all([
+        callModel(ChatMessage.findById, userMessageId),
+        createAssistantMessage({
+          chatId: chat.id,
+          content: 'Идея проекта создана. Теперь её можно открыть и отредактировать.',
+          metadata: {
+            ...idea,
+            id: createdProjectId,
+            passportId: req.passport.id,
+          },
+        }),
+      ]);
+
+      await callModel(Chat.touch, chat.id);
+
+      return res.json({
+        chatId: chat.id,
+        messages: [normalizeMessage(userMessage), normalizeMessage(assistantMessage)],
+      });
+    }
+
     const assistantContent = await generateAssistantAnswer({
       messages: recentMessages,
       chat,
@@ -190,7 +300,7 @@ exports.createMessage = async function (req, res) {
       passportId: null,
       role: 'assistant',
       content: assistantContent.message,
-      metadata: assistantContent.status === 'idea_ready' && JSON.stringify(assistantContent.idea),
+      metadata: assistantContent.status === 'idea_ready' ? assistantContent.idea : null,
       source: 'text',
     });
 

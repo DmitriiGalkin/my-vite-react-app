@@ -36,11 +36,13 @@ function ProjectCard({ project }: ProjectCardProps) {
         <Typography color="text.secondary">{project.description}</Typography>
       </CardContent>
 
-      <CardActions sx={{ px: 2, pb: 2 }}>
-        <Button component={Link} to={`/project/${project.id}`} variant="contained" fullWidth>
-          Подробнее
-        </Button>
-      </CardActions>
+      {project.id && (
+        <CardActions sx={{ px: 2, pb: 2 }}>
+          <Button component={Link} to={`/project/${project.id}`} variant="contained" fullWidth>
+            Подробнее
+          </Button>
+        </CardActions>
+      )}
     </Card>
   );
 }

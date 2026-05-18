@@ -1,100 +1,79 @@
-'use strict';
+// controllers/participationController.js
+// 'use strict';
 
 const Participation = require('../models/participation');
 const Project = require('../models/project');
-const callModel = require('../utils/callModel');
 
 function getPassportUserIds(req) {
   return (req.users || []).map(user => user.id);
 }
 
-exports.create = async function (req, res) {
+exports.create = async (req, res) => {
   try {
-    const project = await callModel(Project.findById, req.body.projectId);
-
+    // 1. Проверяем, существует ли проект
+    const project = await Project.findById(req.body.projectId);
     if (!project) {
-      return res.json({
-        error: true,
-        message: 'Проект не найден',
-      });
+      return res.status(404).json({ error: true, message: 'Проект не найден' });
     }
 
-    const currentParticipation = await callModel(
-      Participation.findByUserAndProjectIds,
+    // 2. Проверяем, не состоит ли пользователь уже в проекте
+    const currentParticipation = await Participation.findByUserAndProjectIds(
       req.body.userId,
       req.body.projectId,
     );
-
     if (currentParticipation) {
-      return res.json({
-        error: true,
-        message: 'Вы уже состоите в проекте',
-      });
+      return res.status(409).json({ error: true, message: 'Вы уже состоите в проекте' });
     }
 
+    // 3. Проверяем права доступа (можно ли добавлять этого пользователя)
     if (!getPassportUserIds(req).includes(req.body.userId)) {
-      return res.json({
-        error: true,
-        message: 'Нельзя добавлять участника отличного от себя',
-      });
+      return res
+        .status(403)
+        .json({ error: true, message: 'Нельзя добавлять участника отличного от себя' });
     }
 
+    // 4. Создаем участие
     const participation = new Participation(req.body);
-    const participationId = await callModel(Participation.create, participation);
+    const participationId = await Participation.create(participation);
 
-    res.json(participationId);
+    // Возвращаем ID созданной записи
+    res.status(201).json(participationId);
   } catch (err) {
     console.error('participation.create error:', err);
-
-    res.status(500).json({
-      error: true,
-      message: 'Не удалось создать участие в проекте',
-    });
+    res.status(500).json({ error: true, message: 'Не удалось создать участие в проекте' });
   }
 };
 
-exports.delete = async function (req, res) {
+exports.delete = async (req, res) => {
   try {
-    const participation = await callModel(Participation.findById, req.params.id);
-
+    // 1. Находим участие по ID из параметров запроса
+    const participation = await Participation.findById(req.params.id);
     if (!participation) {
-      return res.json({
-        error: true,
-        message: 'Участие не существует',
-      });
+      return res.status(404).json({ error: true, message: 'Участие не существует' });
     }
 
-    const project = await callModel(Project.findById, participation.projectId);
-
+    // 2. Находим проект для проверки прав владельца
+    const project = await Project.findById(participation.projectId);
     if (!project) {
-      return res.json({
-        error: true,
-        message: 'Проект не найден',
-      });
+      return res.status(404).json({ error: true, message: 'Связанный проект не найден' });
     }
 
+    // 3. Проверяем права доступа:
+    // - Либо это собственный ребенок пользователя (isOwnChild)
+    // - Либо пользователь является владельцем проекта (isProjectOwner)
     const isOwnChild = getPassportUserIds(req).includes(participation.userId);
     const isProjectOwner = project.passportId === req.passport.id;
 
     if (!isOwnChild && !isProjectOwner) {
-      return res.json({
-        error: true,
-        message: 'Нет прав на удаление',
-      });
+      return res.status(403).json({ error: true, message: 'Нет прав на удаление' });
     }
 
-    await callModel(Participation.delete, participation.id);
+    // 4. Удаляем участие
+    await Participation.delete(participation.id);
 
-    res.json({
-      error: false,
-      message: 'Удаление участия в проекте',
-    });
+    res.json({ error: false, message: 'Удаление участия в проекте' });
   } catch (err) {
     console.error('participation.delete error:', err);
-
-    res.status(500).json({
-      error: true,
-      message: 'Не удалось удалить участие в проекте',
-    });
+    res.status(500).json({ error: true, message: 'Не удалось удалить участие в проекте' });
   }
 };

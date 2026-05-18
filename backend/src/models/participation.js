@@ -1,47 +1,110 @@
-'use strict';
-var dbConn = require('../db');
+// src/models/participation.js
+// 'use strict';
+const pool = require('../db'); // Подключаем пул соединений
 
-var Participation = function(data){
+class Participation {
+  constructor(data) {
+    this.id = data.id;
     this.userId = data.userId;
     this.projectId = data.projectId;
-};
+    // Добавим даты, если они есть в таблице
+    this.createdAt = data.createdAt;
+    this.updatedAt = data.updatedAt;
+  }
 
-Participation.create = function (data, result) {
-    dbConn.query("INSERT INTO participation set ?", data, function (err, res) {
-        result(err, res.insertId);
-    });
-};
+  // --- СТАТИЧЕСКИЕ МЕТОДЫ ---
 
-Participation.delete = function(id, result){
-    dbConn.query(`DELETE FROM participation WHERE id = ?`, id, function (err, res) {
-        result(null, res);
-    });
-};
+  /**
+   * Создает новую запись об участии.
+   * @param {Object} data - Данные для вставки (userId, projectId).
+   * @returns {Promise<number>} ID созданной записи.
+   */
+  static async create(data) {
+    try {
+      const [result] = await pool.query('INSERT INTO participation SET ?', data);
+      return result.insertId;
+    } catch (err) {
+      console.error('Participation.create error:', err);
+      throw err;
+    }
+  }
 
-Participation.deleteByUserId = function(id, result){
-    dbConn.query(`DELETE FROM participation WHERE userId = ?`, id, function (err, res) {
-        result(null, res);
-    });
-};
+  /**
+   * Удаляет участие по ID.
+   * @param {number} id - ID записи участия.
+   * @returns {Promise<void>}
+   */
+  static async delete(id) {
+    try {
+      await pool.query('DELETE FROM participation WHERE id = ?', [id]);
+    } catch (err) {
+      console.error('Participation.delete error:', err);
+      throw err;
+    }
+  }
 
-Participation.findById = function(id, result){
-    dbConn.query("SELECT * FROM participation WHERE id = ?", [id], function (err, res) {
-        result(null, res.length ? res[0] : undefined);
-    });
-};
+  /**
+   * Удаляет все участия пользователя.
+   * @param {number} userId - ID пользователя.
+   * @returns {Promise<void>}
+   */
+  static async deleteByUserId(userId) {
+    try {
+      await pool.query('DELETE FROM participation WHERE userId = ?', [userId]);
+    } catch (err) {
+      console.error('Participation.deleteByUserId error:', err);
+      throw err;
+    }
+  }
 
-// Участия проекту
-Participation.findByProjectId = function (id, result) {
-    dbConn.query('SELECT * FROM participation WHERE projectId = ? ', id, function (err, res) {
-      console.log(err, res, 'err, res');
-      result(null, res || []);
-    });
-};
+  /**
+   * Находит участие по ID.
+   * @param {number} id - ID записи.
+   * @returns {Promise<Participation|null>}
+   */
+  static async findById(id) {
+    try {
+      const [rows] = await pool.query('SELECT * FROM participation WHERE id = ?', [id]);
+      return rows.length > 0 ? new Participation(rows[0]) : null;
+    } catch (err) {
+      console.error('Participation.findById error:', err);
+      throw err;
+    }
+  }
 
-Participation.findByUserAndProjectIds = function(userId, projectId, result){
-    dbConn.query("SELECT * FROM participation WHERE userId = ? AND projectId =?", [userId, projectId], function (err, res) {
-        result(null, res.length ? res[0] : undefined);
-    });
-};
+  /**
+   * Находит все участия в проекте.
+   * @param {number} projectId - ID проекта.
+   * @returns {Promise<Participation[]>}
+   */
+  static async findByProjectId(projectId) {
+    try {
+      const [rows] = await pool.query('SELECT * FROM participation WHERE projectId = ?', [
+        projectId,
+      ]);
+      return rows.map(row => new Participation(row));
+    } catch (err) {
+      console.error('Participation.findByProjectId error:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Проверяет, участвует ли пользователь в проекте.
+   * @param {number} userId - ID пользователя.
+   * @param {number} projectId - ID проекта.
+   * @returns {Promise<Participation|null>}
+   */
+  static async findByUserAndProjectIds(userId, projectId) {
+    try {
+      const sql = 'SELECT * FROM participation WHERE userId = ? AND projectId = ?';
+      const [rows] = await pool.query(sql, [userId, projectId]);
+      return rows.length > 0 ? new Participation(rows[0]) : null;
+    } catch (err) {
+      console.error('Participation.findByUserAndProjectIds error:', err);
+      throw err;
+    }
+  }
+}
 
 module.exports = Participation;

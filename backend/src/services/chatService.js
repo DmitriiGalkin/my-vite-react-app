@@ -63,21 +63,20 @@ async function createAssistantMessage({ chatId, content, metadata = null }) {
   return callModel(ChatMessage.findById, assistantMessageId);
 }
 
-async function createUserMessage({ chatId, passportId, content, source }) {
-  const userMessageId = await callModel(ChatMessage.create, {
-    chatId,
-    passportId,
-    role: 'user',
-    content,
-    source,
-  });
-
-  return userMessageId;
-}
+// async function createUserMessage({ chatId, passportId, content, source }) {
+//   const userMessageId = await callModel(ChatMessage.create, {
+//     chatId,
+//     passportId,
+//     role: 'user',
+//     content,
+//     source,
+//   });
+//
+//   return userMessageId;
+// }
 
 module.exports = {
   normalizeMessage,
   getOrCreateChat,
   createAssistantMessage,
-  createUserMessage,
 };

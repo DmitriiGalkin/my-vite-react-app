@@ -1,95 +1,80 @@
-'use strict';
+// controllers/userController.js
+// 'use strict';
 
 const User = require('../models/user');
 const Participation = require('../models/participation');
-const callModel = require('../utils/callModel');
 
-exports.create = async function (req, res) {
+exports.create = async (req, res) => {
   try {
-    const user = new User({
-      ...req.body,
-      passportId: req.passport.id,
-    });
+    // Добавляем passportId из авторизованного пользователя
+    const userData = { ...req.body, passportId: req.passport.id };
 
-    const userId = await callModel(User.create, user);
+    // Прямой вызов метода модели. Он вернет ID созданного пользователя.
+    const userId = await User.create(userData);
 
-    res.json(userId);
+    // Возвращаем успех с ID (или весь объект, по желанию)
+    res.status(201).json({ message: 'Участник создан', id: userId });
   } catch (err) {
     console.error('user.create error:', err);
-
-    res.status(500).json({
-      error: true,
-      message: 'Не удалось создать участника',
-    });
+    res.status(500).json({ error: true, message: 'Не удалось создать участника' });
   }
 };
 
-// Обновление участника
-exports.update = async function (req, res) {
+exports.update = async (req, res) => {
   try {
-    await callModel(User.update, new User(req.body));
+    // Создаем экземпляр модели из тела запроса
+    const userToUpdate = new User(req.body);
 
-    res.json({
-      error: false,
-      message: 'Обновление участника',
-    });
+    // Прямой вызов метода обновления. Предполагаем, что ID уже есть в req.body.
+    await User.update(userToUpdate);
+
+    res.json({ error: false, message: 'Участник успешно обновлен' });
   } catch (err) {
     console.error('user.update error:', err);
-
-    res.status(500).json({
-      error: true,
-      message: 'Не удалось обновить участника',
-    });
+    res.status(500).json({ error: true, message: 'Не удалось обновить участника' });
   }
 };
 
-exports.delete = async function (req, res) {
+exports.delete = async (req, res) => {
   try {
-    const user = await callModel(User.findById, req.params.id);
+    const userId = req.params.id;
+    const currentPassportId = req.passport.id;
 
+    // 1. Проверяем, существует ли пользователь
+    const user = await User.findById(userId);
     if (!user) {
-      return res.json({
-        error: true,
-        message: 'Ребенок не существует',
-      });
+      return res.status(404).json({ error: true, message: 'Участник не найден' });
     }
 
-    if (user.passportId !== req.passport.id) {
-      return res.json({
-        error: true,
-        message: 'Нет прав на удаление',
-      });
+    // 2. Проверяем права доступа (владелец ли пытается удалить)
+    if (user.passportId !== currentPassportId) {
+      return res.status(403).json({ error: true, message: 'Нет прав на удаление этого участника' });
     }
 
-    await callModel(Participation.deleteByUserId, user.id);
-    await callModel(User.delete, req.params.id);
+    // 3. Удаляем связанные участия в проектах (каскадное удаление)
+    await Participation.deleteByUserId(userId);
 
-    res.json({
-      error: false,
-      message: 'Удаление участника и его участий в проектах',
-    });
+    // 4. Удаляем самого пользователя (логическое удаление)
+    await User.delete(userId);
+
+    res.json({ error: false, message: 'Участник и его участия в проектах удалены' });
   } catch (err) {
     console.error('user.delete error:', err);
-
-    res.status(500).json({
-      error: true,
-      message: 'Не удалось удалить участника',
-    });
+    res.status(500).json({ error: true, message: 'Не удалось удалить участника' });
   }
 };
 
-// Участник
-exports.findById = async function (req, res) {
+exports.findById = async (req, res) => {
   try {
-    const user = await callModel(User.findById, req.params.id);
+    const user = await User.findById(req.params.id);
 
-    res.send(user);
+    if (!user) {
+      return res.status(404).json({ error: true, message: 'Участник не найден' });
+    }
+
+    res.json(user);
   } catch (err) {
     console.error('user.findById error:', err);
-
-    res.status(500).json({
-      error: true,
-      message: 'Не удалось получить участника',
-    });
+    res.status(500).json({ error: true, message: 'Не удалось получить данные участника' });
   }
 };

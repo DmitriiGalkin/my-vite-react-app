@@ -1,5 +1,4 @@
-import { Link } from 'react-router-dom';
-import { Button, Card, CardActions, CardContent, CardMedia, Typography } from '@mui/material';
+import { Card, CardContent, CardMedia, Typography } from '@mui/material';
 import type { Project } from './types';
 
 type ProjectCardProps = {
@@ -20,11 +19,12 @@ function ProjectCard({ project }: ProjectCardProps) {
         borderColor: 'divider',
         overflow: 'hidden',
       }}
+      onClick={() => project.id && (window.location.href = `/project/${project.id}`)}
     >
       <CardMedia
         component="img"
-        height="180"
-        image={project.image || 'https://placehold.co/600x400?text=Project'}
+        height="90"
+        image={project.image || `/bg.jpeg`}
         alt={project.title || 'Проект'}
         sx={{ objectFit: 'cover' }}
       />
@@ -35,14 +35,6 @@ function ProjectCard({ project }: ProjectCardProps) {
         </Typography>
         <Typography color="text.secondary">{project.description}</Typography>
       </CardContent>
-
-      {project.id && (
-        <CardActions sx={{ px: 2, pb: 2 }}>
-          <Button component={Link} to={`/project/${project.id}`} variant="contained" fullWidth>
-            Подробнее
-          </Button>
-        </CardActions>
-      )}
     </Card>
   );
 }

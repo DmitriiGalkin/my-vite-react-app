@@ -1,101 +1,121 @@
-'use strict';
-var dbConn = require('../db');
+// src/models/project.js
+// 'use строгий';
+const pool = require('../db'); // Подключаем пул
 
-var Project = function (data) {
-  this.id = data.id;
-  this.title = data.title;
-  this.description = data.description;
-  this.image = data.image;
-  this.passportId = data.passportId; // Создатель проекта
-  this.placeId = data.placeId;
-};
-
-Project.create = function (data, result) {
-  dbConn.query('INSERT INTO project set ?', data, function (err, res) {
-    if (err) {
-      console.error('Project.create error:', err);
-      return result(err);
-    }
-
-    result(null, res?.insertId);
-  });
-};
-
-Project.update = function (id, obj, result) {
-  dbConn.query(
-    'UPDATE project SET title=?, description=?, image=?, placeId=? WHERE id = ?',
-    [obj.title, obj.description, obj.image, obj.placeId, id],
-    function (err, res) {
-      if (err) {
-        console.error('Project.update error:', err);
-        return result(err);
-      }
-
-      result(null, res);
-    },
-  );
-};
-
-Project.delete = function (id, result) {
-  dbConn.query(
-    'UPDATE project SET deletedAt = CURRENT_TIMESTAMP() WHERE id = ?',
-    [id],
-    function (err, res) {
-      if (err) {
-        console.error('Project.delete error:', err);
-        return result(err);
-      }
-
-      result(null, res);
-    },
-  );
-};
-
-Project.findAll = function (params, result) {
-  if (params.variant === 'participation' && !params.userId) {
-    return result(null, []);
+class Project {
+  constructor(data) {
+    this.id = data.id;
+    this.title = data.title;
+    this.description = data.description;
+    this.image = data.image;
+    this.passportId = data.passportId;
+    this.placeId = data.placeId;
+    this.deletedAt = data.deletedAt;
   }
 
-  let where = 'WHERE ';
-  where +=
-    params.deleted === 'true' ? 'deletedAt IS NOT NULL OR deleted IS NULL' : 'deletedAt IS NULL';
-  where =
-    params.variant === 'participation' && params.userId
-      ? 'LEFT JOIN participation ON participation.projectId = project.id ' +
-        where +
-        ' AND participation.userId = ' +
-        params.userId
-      : where;
-  where +=
-    ' AND passportId = ' +
-    (params.variant === 'self' && params.passportId ? params.passportId : 'passportId');
-  where +=
-    params.type === 'recommendation' && params.passportId
-      ? ' AND passportId != ' + params.passportId
-      : '';
+  // --- СТАТИЧЕСКИЕ МЕТОДЫ ---
 
-  const query = `SELECT project.* FROM project ${where}`;
-  console.log(query, 'Project.findAll query');
+  static async create(data) {
+    try {
+      const [result] = await pool.query('INSERT INTO project SET ?', data);
+      return result.insertId;
+    } catch (err) {
+      console.error('Project.create error:', err);
+      throw err;
+    }
+  }
 
-  dbConn.query(query, function (err, res) {
-    if (err) {
+  static async update(id, obj) {
+    const sql = `
+      UPDATE project 
+      SET title = ?, description = ?, image = ?, placeId = ? 
+      WHERE id = ?
+    `;
+    const values = [obj.title, obj.description, obj.image, obj.placeId, id];
+
+    try {
+      await pool.query(sql, values);
+    } catch (err) {
+      console.error('Project.update error:', err);
+      throw err;
+    }
+  }
+
+  static async delete(id) {
+    // Логическое удаление (soft delete)
+    const sql = 'UPDATE project SET deletedAt = CURRENT_TIMESTAMP() WHERE id = ?';
+
+    try {
+      await pool.query(sql, [id]);
+    } catch (err) {
+      console.error('Project.delete error:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Сложный метод поиска с динамическими условиями.
+   * @param {Object} params - Параметры фильтрации.
+   */
+  static async findAll(params) {
+    // Безопасное построение запроса с плейсхолдерами
+    let sql = 'SELECT project.* FROM project';
+    const conditions = [];
+    const values = [];
+
+    // Условие для JOIN (participation)
+    if (params?.variant === 'participation' && params?.userId) {
+      sql += ' LEFT JOIN participation ON participation.projectId = project.id';
+      conditions.push('participation.userId = ?');
+      values.push(params.userId);
+    }
+
+    // Условие для владельца (self)
+    if (params?.variant === 'self' && params?.passportId) {
+      conditions.push('project.passportId = ?');
+      values.push(params.passportId);
+    }
+
+    // Условие для рекомендаций (НЕ владелец)
+    if (params?.type === 'recommendation' && params?.passportId) {
+      conditions.push('project.passportId != ?');
+      values.push(params.passportId);
+    }
+
+    // Условие удаления (deletedAt)
+    if (params?.deleted === 'true') {
+      conditions.push('project.deletedAt IS NOT NULL');
+    } else {
+      conditions.push('project.deletedAt IS NULL');
+    }
+
+    // Собираем финальный запрос, если есть условия WHERE
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    console.log(sql, values, 'Project.findAll query'); // Логируем для отладки
+
+    try {
+      const [rows] = await pool.query(sql, values);
+      return rows;
+    } catch (err) {
       console.error('Project.findAll error:', err);
-      return result(err, []);
+      throw err;
     }
+  }
 
-    result(null, res || []);
-  });
-};
+  static async findById(id) {
+    const sql = 'SELECT * FROM project WHERE id = ?';
 
-Project.findById = function (id, result) {
-  dbConn.query('SELECT * FROM project WHERE id = ?', [id], function (err, res) {
-    if (err) {
+    try {
+      const [rows] = await pool.query(sql, [id]);
+      return rows.length > 0 ? new Project(rows[0]) : null;
+    } catch (err) {
       console.error('Project.findById error:', err);
-      return result(err);
+      throw err;
     }
-
-    result(null, res?.[0]);
-  });
-};
+  }
+}
 
 module.exports = Project;

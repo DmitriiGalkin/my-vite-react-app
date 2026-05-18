@@ -1,37 +1,62 @@
-'use strict';
-var dbConn = require('../db');
+// src/models/place.js
+// 'use strict';
+const pool = require('../db'); // Подключаем пул соединений
 
-var Place = function(data){
-    // this.id = data.id;
+class Place {
+  constructor(data) {
+    // ID теперь тоже присваивается, это стандарт для моделей
+    this.id = data.id;
     this.title = data.title;
     this.image = data.image;
     this.latitude = data.latitude;
     this.longitude = data.longitude;
-};
+  }
 
-Place.create = function (data, result) {
-    dbConn.query("INSERT INTO place SET ?", data, function (err, res) {
-        console.log(err, "err");
-        result(err, res.insertId);
-    });
-};
+  // --- СТАТИЧЕСКИЕ МЕТОДЫ ---
 
-Place.findAll = () => function (result) {
-    dbConn.query("SELECT * FROM place", function (err, res) {
-        result(null, res || []);
-    });
-};
-// Place.findByMeet = function (meet, result) {
-//     dbConn.query("SELECT * FROM place WHERE latitude = ? AND longitude = ?", [meet.latitude, meet.longitude], function (err, res) {
-//         result(null, res.length ? res[0] : undefined);
-//     });
-// };
-Place.findById = function (id, result) {
-    dbConn.query("SELECT * FROM place WHERE id = ?", [id], function (err, res) {
-        console.log(err, "err");
-        result(null, res.length ? res[0] : undefined);
-    });
-};
+  /**
+   * Создает новое место.
+   * @param {Object} data - Данные для вставки.
+   * @returns {Promise<number>} ID созданной записи.
+   */
+  static async create(data) {
+    try {
+      const [result] = await pool.query('INSERT INTO place SET ?', data);
+      return result.insertId;
+    } catch (err) {
+      console.error('Place.create error:', err);
+      throw err;
+    }
+  }
 
+  /**
+   * Находит все места.
+   * @returns {Promise<Place[]>}
+   */
+  static async findAll() {
+    try {
+      const [rows] = await pool.query('SELECT * FROM place');
+      return rows.map(row => new Place(row));
+    } catch (err) {
+      console.error('Place.findAll error:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Находит место по ID.
+   * @param {number} id - ID места.
+   * @returns {Promise<Place|null>}
+   */
+  static async findById(id) {
+    try {
+      const [rows] = await pool.query('SELECT * FROM place WHERE id = ?', [id]);
+      return rows.length > 0 ? new Place(rows[0]) : null;
+    } catch (err) {
+      console.error('Place.findById error:', err);
+      throw err;
+    }
+  }
+}
 
 module.exports = Place;

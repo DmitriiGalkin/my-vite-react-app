@@ -1,17 +1,19 @@
-'use strict';
+// controllers/visitController.js
+// 'use strict';
 
-const Meet = require('../models/meet');
 const Visit = require('../models/visit');
+const Meet = require('../models/meet');
 const Project = require('../models/project');
 const Place = require('../models/place');
-const callModel = require('../utils/callModel');
 
 function getPassportUserIds(req) {
   return (req.users || []).map(user => user.id);
 }
 
+// Эта вспомогательная функция остается почти без изменений,
+// но теперь вызывает методы напрямую.
 async function findVisitAndMeet({ visitId }) {
-  const visit = await callModel(Visit.findById, visitId);
+  const visit = await Visit.findById(visitId);
 
   if (!visit) {
     const error = new Error('Участие не существует');
@@ -19,7 +21,7 @@ async function findVisitAndMeet({ visitId }) {
     throw error;
   }
 
-  const meet = await callModel(Meet.findById, visit.meetId);
+  const meet = await Meet.findById(visit.meetId);
 
   if (!meet) {
     const error = new Error('Встреча не найдена');
@@ -27,158 +29,116 @@ async function findVisitAndMeet({ visitId }) {
     throw error;
   }
 
-  return {
-    visit,
-    meet,
-  };
+  return { visit, meet };
 }
 
-async function updateVisitState({ req, res, updater, successMessage, permissionMessage }) {
+exports.create = async (req, res) => {
   try {
-    const { visit, meet } = await findVisitAndMeet({
-      visitId: req.params.id,
-    });
-
-    if (meet.passportId !== req.passport.id) {
-      return res.json({
-        error: true,
-        message: permissionMessage,
-      });
-    }
-
-    await callModel(updater, visit.id);
-
-    res.json({
-      error: false,
-      message: successMessage,
-    });
-  } catch (err) {
-    console.error('visit.updateVisitState error:', err);
-
-    res.status(err.status || 500).json({
-      error: true,
-      message: err.message || 'Не удалось обновить участие',
-    });
-  }
-}
-
-exports.create = async function (req, res) {
-  try {
-    const meet = await callModel(Meet.findById, req.body.meetId);
+    // Прямой вызов модели
+    const meet = await Meet.findById(req.body.meetId);
 
     if (!meet) {
-      return res.json({
-        error: true,
-        message: 'Встреча не найдена',
-      });
+      return res.status(404).json({ error: true, message: 'Встреча не найдена' });
     }
 
-    const currentVisit = await callModel(
-      Visit.findByUserAndMeetIds,
-      req.body.userId,
-      req.body.meetId,
-    );
-
+    // Проверка на дублирование участия
+    const currentVisit = await Visit.findByUserAndMeetIds(req.body.userId, req.body.meetId);
     if (currentVisit) {
-      return res.json({
-        error: true,
-        message: 'Участие уже существует',
-      });
+      return res.status(409).json({ error: true, message: 'Участие уже существует' });
     }
 
+    // Проверка прав доступа
     if (!getPassportUserIds(req).includes(req.body.userId)) {
-      return res.json({
-        error: true,
-        message: 'Нельзя добавлять участника отличного от себя',
-      });
+      return res
+        .status(403)
+        .json({ error: true, message: 'Нельзя добавлять участника отличного от себя' });
     }
 
     const visit = new Visit(req.body);
+    await Visit.create(visit);
 
-    await callModel(Visit.create, visit);
-
-    res.json({
-      error: false,
-      message: 'Участие создано',
-    });
+    res.status(201).json({ error: false, message: 'Участие создано' });
   } catch (err) {
     console.error('visit.create error:', err);
-
-    res.status(500).json({
-      error: true,
-      message: 'Не удалось создать участие',
-    });
+    res.status(500).json({ error: true, message: 'Не удалось создать участие' });
   }
 };
 
-exports.delete = async function (req, res) {
+exports.delete = async (req, res) => {
   try {
-    const { visit } = await findVisitAndMeet({
-      visitId: req.params.id,
-    });
+    const { visit } = await findVisitAndMeet({ visitId: req.params.id });
 
+    // Проверка прав доступа перед удалением
     if (!getPassportUserIds(req).includes(visit.userId)) {
-      return res.json({
-        error: true,
-        message: 'Нет прав на удаление',
-      });
+      return res.status(403).json({ error: true, message: 'Нет прав на удаление' });
     }
 
-    await callModel(Visit.delete, req.params.id);
+    await Visit.delete(req.params.id);
 
-    res.json({
-      error: false,
-      message: 'Удаление участника из встречи',
-    });
+    res.json({ error: false, message: 'Участник удален из встречи' });
   } catch (err) {
     console.error('visit.delete error:', err);
-
-    res.status(err.status || 500).json({
-      error: true,
-      message: err.message || 'Не удалось удалить участие',
-    });
+    res
+      .status(err.status || 500)
+      .json({ error: true, message: err.message || 'Не удалось удалить участие' });
   }
 };
 
-exports.findAll = async function (req, res) {
+// --- ГЛАВНОЕ ИЗМЕНЕНИЕ: Оптимизация findAll ---
+// Старая версия делала много запросов (N+1 проблема).
+// Новая версия использует один SQL-запрос с JOIN для получения всех данных.
+
+exports.findAll = async (req, res) => {
   try {
-    const visits = await callModel(Visit.findByUserId, req.query.userId);
-    const meets = await Promise.all(visits.map(visit => callModel(Meet.findById, visit.meetId)));
+    const userId = req.query.userId;
 
-    const projectIds = [...new Set(meets.map(meet => meet.projectId))];
-    const projects = await Promise.all(
-      projectIds.map(projectId => callModel(Project.findById, projectId)),
-    );
+    // --- ОПТИМИЗИРОВАННЫЙ ЗАПРОС ---
+    // Получаем все данные за один раз с помощью JOIN.
+    // Это намного быстрее, чем делать сотни запросов в цикле.
+    const sql = `
+      SELECT 
+        v.*,
+        m.id AS meet_id, m.startedAt AS meet_startedAt, m.projectId AS meet_projectId,
+        p.id AS project_id, p.title AS project_title, p.placeId AS project_placeId,
+        pl.id AS place_id, pl.title AS place_title, pl.latitude, pl.longitude
+      FROM visit v
+      LEFT JOIN meet m ON m.id = v.meetId AND m.deletedAt IS NULL
+      LEFT JOIN project p ON p.id = m.projectId AND p.deletedAt IS NULL
+      LEFT JOIN place pl ON pl.id = p.placeId
+      WHERE v.userId = ?
+      ORDER BY m.startedAt DESC
+    `;
 
-    const projectsMap = new Map(projectIds.map((projectId, index) => [projectId, projects[index]]));
+    const [rows] = await Visit.pool.query(sql, [userId]);
 
-    const placeIds = [...new Set(projects.map(project => project.placeId))];
-    const places = await Promise.all(placeIds.map(placeId => callModel(Place.findById, placeId)));
-    const placesMap = new Map(placeIds.map((placeId, index) => [placeId, places[index]]));
+    // Группируем данные в нужный формат
+    const result = rows.map(row => ({
+      ...row,
+      meet: row.meet_id
+        ? {
+            id: row.meet_id,
+            startedAt: row.meet_startedAt,
+            project: row.project_id
+              ? {
+                  id: row.project_id,
+                  title: row.project_title,
+                  place: row.place_id
+                    ? {
+                        id: row.place_id,
+                        title: row.place_title,
+                        latitude: row.latitude,
+                        longitude: row.longitude,
+                      }
+                    : null,
+                }
+              : null,
+          }
+        : null,
+    }));
 
-    res.send(
-      visits.map((visit, index) => {
-        const meet = meets[index];
-        const project = projectsMap.get(meet.projectId);
-
-        return {
-          ...visit,
-          meet: {
-            ...meet,
-            project: {
-              ...project,
-              place: placesMap.get(project.placeId),
-            },
-          },
-        };
-      }),
-    );
+    res.json(result);
   } catch (err) {
     console.error('visit.findAll error:', err);
-
-    res.status(500).json({
-      error: true,
-      message: 'Не удалось получить посещения',
-    });
+    res.status(500).json({ error: true, message: 'Не удалось получить посещения' });
   }
 };

@@ -1,172 +1,203 @@
-'use strict';
+// controllers/meetController.js
+// 'use strict';
+
 const Meet = require('../models/meet');
-const User = require('../models/user');
 const Visit = require('../models/visit');
-const Place = require('../models/place');
 const Project = require('../models/project');
-const callModel = require('../utils/callModel');
+const Place = require('../models/place');
+const User = require('../models/user');
 
-exports.create = async function (req, res) {
+exports.create = async (req, res) => {
   try {
-    const meet = new Meet({ ...req.body, passportId: req.passport.id });
-    const meetId = await callModel(Meet.create, meet);
-
-    res.json(meetId);
+    const meetData = { ...req.body, passportId: req.passport.id };
+    const meetId = await Meet.create(meetData);
+    res.status(201).json({ message: 'Встреча создана', id: meetId });
   } catch (err) {
     console.error('meet.create error:', err);
-
-    res.status(500).json({
-      error: true,
-      message: 'Не удалось создать встречу',
-    });
+    res.status(500).json({ error: true, message: 'Не удалось создать встречу' });
   }
 };
 
-exports.update = async function (req, res) {
+exports.update = async (req, res) => {
   try {
-    const obj = new Meet(req.body);
-
-    await callModel(Meet.update, req.params.id, obj);
-
-    res.json({ error: false, message: 'Встреча обновлен' });
+    const meetData = new Meet(req.body);
+    await Meet.update(req.params.id, meetData);
+    res.json({ error: false, message: 'Встреча обновлена' });
   } catch (err) {
     console.error('meet.update error:', err);
-
-    res.status(500).json({
-      error: true,
-      message: 'Не удалось обновить встречу',
-    });
+    res.status(500).json({ error: true, message: 'Не удалось обновить встречу' });
   }
 };
 
-exports.delete = async function (req, res) {
+exports.delete = async (req, res) => {
   try {
-    const meet = await callModel(Meet.findById, req.params.id);
+    const meet = await Meet.findById(req.params.id);
 
     if (!meet) {
-      return res.json({ error: true, message: 'Встреча не существует' });
+      return res.status(404).json({ error: true, message: 'Встреча не существует' });
     }
 
     if (meet.passportId !== req.passport.id) {
-      return res.json({ error: true, message: 'Нет прав на удаление' });
+      return res.status(403).json({ error: true, message: 'Нет прав на удаление' });
     }
 
-    await callModel(Meet.delete, req.params.id);
-
-    res.json({ error: false, message: 'Удаление встречи' });
+    await Meet.delete(req.params.id);
+    res.json({ error: false, message: 'Встреча удалена' });
   } catch (err) {
     console.error('meet.delete error:', err);
-
-    res.status(500).json({
-      error: true,
-      message: 'Не удалось удалить встречу',
-    });
+    res.status(500).json({ error: true, message: 'Не удалось удалить встречу' });
   }
 };
 
-exports.toggleUserMeet = async function (req, res) {
+exports.toggleUserMeet = async (req, res) => {
   try {
-    const userMeet = await callModel(Visit.findById, req.user.id, req.params.meetId);
+    // ИСПРАВЛЕНИЕ ЛОГИКИ:
+    // Метод findByUserAndMeetIds ожидает два аргумента, а не три.
+    // Проверяем, есть ли уже запись об участии.
+    const existingVisit = await Visit.findByUserAndMeetIds(req.user.id, req.params.meetId);
 
-    if (userMeet) {
-      await callModel(Visit.delete, req.user.id, req.params.meetId);
-
-      return res.json({ error: false, message: 'Удаление участника из встречи' });
+    if (existingVisit) {
+      // Если есть - удаляем её
+      await Visit.delete(existingVisit.id);
+      return res.json({ error: false, message: 'Участник удален с встречи' });
+    } else {
+      // Если нет - создаем новую
+      const newVisit = new Visit({ userId: req.user.id, meetId: req.params.meetId });
+      await Visit.create(newVisit);
+      return res.json({ error: false, message: 'Участник добавлен на встречу' });
     }
-
-    const createdUserMeet = new Visit({ ...req.params, userId: req.user.id });
-
-    await callModel(Visit.create, createdUserMeet);
-
-    res.json({ error: false, message: 'Добавление участника на встречу' });
   } catch (err) {
     console.error('meet.toggleUserMeet error:', err);
-
-    res.status(500).json({
-      error: true,
-      message: 'Не удалось изменить участие во встрече',
-    });
+    res.status(500).json({ error: true, message: 'Не удалось изменить участие во встрече' });
   }
 };
 
-exports.findAll = async function (req, res) {
+// --- ГЛАВНАЯ ОПТИМИЗАЦИЯ ---
+// findAll теперь использует один SQL-запрос с JOIN вместо сотен отдельных запросов.
+exports.findAll = async (req, res) => {
   try {
-    const meets =
-      req.query.isForPassport === 'true'
-        ? await callModel(Meet.findByPassportId, req.passport.id)
-        : await callModel(Meet.findByUserId, req.query.userId);
+    const isForPassport = req.query.isForPassport === 'true';
+    const userIdForQuery = isForPassport ? req.passport.id : req.query.userId;
 
-    const projects = await Promise.all(
-      meets.map(meet => callModel(Project.findById, meet.projectId)),
-    );
+    // --- ОПТИМИЗИРОВАННЫЙ ЗАПРОС С JOIN ---
+    // Собираем все данные за один запрос к БД.
+    const sql = `
+      SELECT 
+        m.*,
+        p.id AS project_id, p.title AS project_title, p.placeId AS project_placeId,
+        pl.id AS place_id, pl.title AS place_title,
+        v.id AS visit_id, v.userId AS visit_userId,
+        u.id AS user_id, u.title AS user_title
+      FROM meet m
+      LEFT JOIN project p ON p.id = m.projectId AND p.deletedAt IS NULL
+      LEFT JOIN place pl ON pl.id = p.placeId
+      LEFT JOIN visit v ON v.meetId = m.id
+      LEFT JOIN user u ON u.id = v.userId AND u.deletedAt IS NULL
+      WHERE ${isForPassport ? 'm.passportId = ?' : 'EXISTS (SELECT 1 FROM participation WHERE projectId = m.projectId AND userId = ?)'}
+    ORDER BY m.startedAt DESC
+    `;
 
-    const places = await Promise.all(
-      projects.map(project => callModel(Place.findById, project.placeId)),
-    );
+    const [rows] = await Meet.pool.query(sql, [userIdForQuery]);
 
-    const visits = await Promise.all(meets.map(meet => callModel(Visit.findByMeet, meet)));
+    // Группируем плоский результат из БД в иерархическую структуру JSON
+    const meetsMap = new Map();
 
-    const users = await Promise.all(meets.map(meet => callModel(User.findByMeet, meet)));
+    rows.forEach(row => {
+      // Создаем объект встречи, если его еще нет в карте
+      if (!meetsMap.has(row.id)) {
+        meetsMap.set(row.id, {
+          ...row,
+          id: row.id,
+          project: row.project_id ? {
+            id: row.project_id,
+            title: row.project_title,
+            place: row.place_id ? {
+              id: row.place_id,
+              title: row.place_title,
+            } : null
+          } : null,
+          visits: [] // Инициализируем пустой массив для визитов
+        });
+      }
 
-    res.send(
-      meets.map((meet, index) => ({
-        ...meet,
-        visits: visits[index].map((visit, visitIndex) => ({
-          ...visit,
-          user: users[index][visitIndex],
-        })),
-        project: {
-          ...projects[index],
-          place: places[index],
-        },
-      })),
-    );
+      // Добавляем визит и пользователя к встрече, если данные о визите есть в строке
+      if (row.visit_id) {
+        meetsMap.get(row.id).visits.push({
+          id: row.visit_id,
+          user: row.user_id ? {
+            id: row.user_id,
+            title: row.user_title
+          } : null
+        });
+      }
+    });
+
+    // Преобразуем карту обратно в массив для отправки клиенту
+    const result = Array.from(meetsMap.values());
+
+    res.json(result);
   } catch (err) {
     console.error('meet.findAll error:', err);
-
-    res.status(500).json({
-      error: true,
-      message: 'Не удалось получить встречи',
-    });
+    res.status(500).json({ error: true, message: 'Не удалось получить встречи' });
   }
 };
 
-exports.findById = async function (req, res) {
+exports.findById = async (req, res) => {
   try {
-    const meet = await callModel(Meet.findById, req.params.id);
+    // --- ОПТИМИЗАЦИЯ findById ---
+    // Используем один запрос с JOIN для получения всех данных.
+    const sql = `
+    SELECT
+    m.*,
+    p.id AS project_id, p.title AS project_title, p.placeId AS project_placeId,
+    pl.id AS place_id, pl.title AS place_title,
+    v.id AS visit_id, v.userId AS visit_userId,
+    u.id AS user_id, u.title AS user_title
+    FROM meet m
+    LEFT JOIN project p ON p.id = m.projectId AND p.deletedAt IS NULL
+    LEFT JOIN place pl ON pl.id = p.placeId
+    LEFT JOIN visit v ON v.meetId = m.id
+    LEFT JOIN user u ON u.id = v.userId AND u.deletedAt IS NULL
+    WHERE m.id = ?
+    `;
 
-    if (!meet) {
-      return res.status(400).send({
-        error: true,
-        message: 'Встреча с таким номером не найдена',
-      });
+    const [rows] = await Meet.pool.query(sql, [req.params.id]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: true, message: 'Встреча не найдена' });
     }
 
-    const project = await callModel(Project.findById, meet.projectId);
-    const place = await callModel(Place.findById, project.placeId);
-    const visits = await callModel(Visit.findByMeet, meet);
+    // Группируем данные из строк в нужный формат JSON.
+    const meetRow = rows[0];
+    const result = {
+      ...meetRow,
+      id: meetRow.id,
+      project: meetRow.project_id ? {
+        id: meetRow.project_id,
+        title: meetRow.project_title,
+        place: meetRow.place_id ? {
+          id: meetRow.place_id,
+          title: meetRow.place_title,
+        } : null
+      } : null,
+      visits: []
+    };
 
-    const visitUsers = await Promise.all(
-      visits.map(visit => callModel(User.findById, visit.userId)),
-    );
-
-    res.send({
-      ...meet,
-      visits: visits.map((visit, index) => ({
-        ...visit,
-        user: visitUsers[index],
-      })),
-      project: {
-        ...project,
-        place,
-      },
+    rows.forEach(row => {
+      if (row.visit_id) {
+        result.visits.push({
+          id: row.visit_id,
+          user: row.user_id ? {
+            id: row.user_id,
+            title: row.user_title
+          } : null
+        });
+      }
     });
+
+    res.json(result);
   } catch (err) {
     console.error('meet.findById error:', err);
-
-    res.status(500).json({
-      error: true,
-      message: 'Не удалось получить встречу',
-    });
+    res.status(500).json({ error: true, message: 'Не удалось получить встречу' });
   }
 };

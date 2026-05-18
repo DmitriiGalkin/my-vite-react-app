@@ -1,121 +1,136 @@
-'use strict';
-const dbConn = require('../db');
+// src/models/Chat.js
+// 'use strict';
+const pool = require('../db'); // Подключаем пул соединений
 
-const Chat = function (data) {
-  this.id = data.id;
-  this.passportId = data.passportId;
-  this.title = data.title;
-  this.summary = data.summary;
-};
+// Используем класс для лучшей структуры
+class Chat {
+  constructor(data) {
+    this.id = data.id;
+    this.passportId = data.passportId;
+    this.title = data.title;
+    this.summary = data.summary;
+    this.updatedAt = data.updatedAt;
+    // Добавим поле для последнего сообщения, если оно есть (из JOIN запроса)
+    this.lastMessage = data.lastMessage;
+  }
 
-Chat.create = function (data, result) {
-  dbConn.query(
-    `
+  // --- СТАТИЧЕСКИЕ МЕТОДЫ (для работы с БД) ---
+
+  /**
+   * Создает новый чат.
+   * @param {Object} data - Данные для вставки.
+   * @returns {Promise<number>} ID созданного чата.
+   */
+  static async create(data) {
+    const sql = `
       INSERT INTO \`chat\`
         (passportId, title, summary)
       VALUES
         (?, ?, ?)
-    `,
-    [data.passportId, data.title || null, data.summary || null],
-    function (err, res) {
-      if (err) {
-        console.error('Chat.create error:', err);
-        return result(err);
-      }
+    `;
+    const values = [data.passportId, data.title || null, data.summary || null];
 
-      result(null, res && res.insertId);
-    },
-  );
-};
+    try {
+      const [result] = await pool.query(sql, values);
+      return result.insertId;
+    } catch (err) {
+      console.error('Chat.create error:', err);
+      throw err; // Выбрасываем ошибку для обработки в контроллере
+    }
+  }
 
-Chat.findActiveByPassportId = function (passportId, result) {
-  dbConn.query(
-    `
+  /**
+   * Находит активный чат по ID пользователя.
+   * @param {number} passportId - ID пользователя.
+   * @returns {Promise<Chat|null>}
+   */
+  static async findActiveByPassportId(passportId) {
+    const sql = `
       SELECT *
       FROM chat
       WHERE passportId = ?
         AND deletedAt IS NULL
       ORDER BY updatedAt DESC
       LIMIT 1
-    `,
-    [passportId],
-    function (err, res) {
-      if (err) {
-        console.error('Chat.findActiveByPassportId error:', err);
-        return result(err);
-      }
+    `;
 
-      result(null, res?.[0]);
-    },
-  );
-};
+    const [rows] = await pool.query(sql, [passportId]);
+    return rows.length > 0 ? new Chat(rows[0]) : null;
+  }
 
-Chat.findByIdAndPassportId = function (id, passportId, result) {
-  dbConn.query(
-    `
+  /**
+   * Проверяет доступ пользователя к чату.
+   * @param {number} id - ID чата.
+   * @param {number} passportId - ID пользователя.
+   * @returns {Promise<Chat|null>}
+   */
+  static async findByIdAndPassportId(id, passportId) {
+    const sql = `
       SELECT *
       FROM chat
       WHERE id = ?
         AND passportId = ?
         AND deletedAt IS NULL
       LIMIT 1
-    `,
-    [id, passportId],
-    function (err, res) {
-      if (err) {
-        console.error('Chat.findByIdAndPassportId error:', err);
-        return result(err);
-      }
+    `;
 
-      result(null, res?.[0]);
-    },
-  );
-};
+    const [rows] = await pool.query(sql, [id, passportId]);
+    return rows.length > 0 ? new Chat(rows[0]) : null;
+  }
 
-Chat.touch = function (id, result) {
-  dbConn.query(
-    'UPDATE chat SET updatedAt = CURRENT_TIMESTAMP() WHERE id = ?',
-    [id],
-    function (err, res) {
-      if (err) {
-        console.error('Chat.touch error:', err);
-        return result(err);
-      }
+  /**
+   * Обновляет время последнего изменения чата (touch).
+   * @param {number} id - ID чата.
+   * @returns {Promise<void>}
+   */
+  static async touch(id) {
+    const sql = 'UPDATE chat SET updatedAt = CURRENT_TIMESTAMP() WHERE id = ?';
 
-      result(null, res);
-    },
-  );
-};
+    try {
+      await pool.query(sql, [id]);
+    } catch (err) {
+      console.error('Chat.touch error:', err);
+      throw err;
+    }
+  }
 
-Chat.findAllByPassportId = function (passportId, result) {
-  dbConn.query(
-    `
+  /**
+   * Находит все чаты пользователя с последним сообщением в каждом.
+   * @param {number} passportId - ID пользователя.
+   * @returns {Promise<Chat[]>}
+   */
+  static async findAllByPassportId(passportId) {
+    const sql = `
       SELECT
         chat.*,
-        lastMessage.content AS lastMessage
+        lastMessage.content AS lastMessage,
+        lastMessage.createdAt AS lastMessageAt,
+        lastMessage.role AS lastMessageRole
       FROM chat
       LEFT JOIN chatMessage lastMessage
         ON lastMessage.id = (
           SELECT id
-          FROM chatMessage
-          WHERE chatMessage.chatId = chat.id
-          ORDER BY createdAt DESC, id DESC
+          FROM chatMessage cm_inner
+          WHERE cm_inner.chatId = chat.id
+          ORDER BY cm_inner.createdAt DESC, cm_inner.id DESC
           LIMIT 1
         )
       WHERE chat.passportId = ?
         AND chat.deletedAt IS NULL
       ORDER BY chat.updatedAt DESC
-    `,
-    [passportId],
-    function (err, res) {
-      if (err) {
-        console.error('Chat.findAllByPassportId error:', err);
-        return result(err, []);
-      }
+    `;
 
-      result(null, res || []);
-    },
-  );
-};
+    const [rows] = await pool.query(sql, [passportId]);
+
+    // Преобразуем каждую строку в объект Chat и сортируем по дате последнего сообщения (если оно есть)
+    return rows
+      .map(row => new Chat(row))
+      .sort((a, b) => {
+        const dateA = b.lastMessageAt || b.updatedAt;
+        const dateB = a.lastMessageAt || a.updatedAt;
+        return new Date(dateA) - new Date(dateB);
+      });
+  }
+}
 
 module.exports = Chat;

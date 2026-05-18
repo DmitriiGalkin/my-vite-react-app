@@ -1,53 +1,96 @@
-'use strict';
-var dbConn = require('../db');
+// src/models/passport.js
+// 'use strict';
+const pool = require('../db'); // Подключаем пул соединений
 
-var Passport = function(data){
+class Passport {
+  constructor(data) {
+    this.id = data.id;
     this.title = data.title;
     this.email = data.email;
     this.accessToken = data.accessToken;
     this.provider = data.provider;
     this.providerId = data.providerId;
-};
-// Создание родителя
-Passport.create = function (user, result) {
-    console.log(user,'user')
-    dbConn.query("INSERT INTO passport set ?", user, function (err, res) {
-        console.log(err, res,'res')
-        result(null, res.insertId);
-    });
-};
-// Обновление родителя
-Passport.update = function(id, passport, result){
-    dbConn.query("UPDATE passport SET title=? WHERE id = ?", [passport.title, id], function (err, res) {
-        result(null, res);
-    });
-};
-// Обновление токена
-Passport.updateTokenById = function(token, id, result){
-    dbConn.query("UPDATE passport SET accessToken=? WHERE id = ?", [token, id], function (err, res) {
-        result(null, res);
-    });
-};
-// Родитель по идентификатору
-Passport.findById = function (id, result) {
-    dbConn.query("SELECT * from passport where id = ? ", id, function (err, res) {
-        result(null, res?.length ? res[0] : undefined);
-    });
-};
-// Родитель по почте
-Passport.findByEmail = function (email, result) {
-    dbConn.query("SELECT * from passport where email = ? ", email, function (err, res) {
-        result(null, res?.length ? res[0] : undefined);
-    });
-};
+    // Добавим дату создания/обновления, если они есть в ответе БД
+    this.createdAt = data.createdAt;
+    this.updatedAt = data.updatedAt;
+  }
 
-const parse = (res) => res
+  // --- СТАТИЧЕСКИЕ МЕТОДЫ (для работы с БД) ---
 
-// Родитель по accessToken
-Passport.findByAccessToken = function (accessToken, result) {
-    dbConn.query("SELECT * from passport where accessToken = ? ", accessToken, function (err, res) {
-        result(null, (res && res.length) ? parse(res)[0] : null);
-    });
-};
+  /**
+   * Создает нового пользователя.
+   * @param {Object} userData - Данные для вставки.
+   * @returns {Promise<number>} ID созданной записи.
+   */
+  static async create(userData) {
+    try {
+      const [result] = await pool.query('INSERT INTO passport SET ?', userData);
+      return result.insertId;
+    } catch (err) {
+      console.error('Passport.create error:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Обновляет данные пользователя.
+   * @param {number} id - ID пользователя.
+   * @param {Object} passportData - Новые данные.
+   * @returns {Promise<void>}
+   */
+  static async update(id, passportData) {
+    try {
+      await pool.query('UPDATE passport SET title = ? WHERE id = ?', [passportData.title, id]);
+    } catch (err) {
+      console.error('Passport.update error:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Обновляет токен доступа.
+   * @param {string} token - Новый токен.
+   * @param {number} id - ID пользователя.
+   * @returns {Promise<void>}
+   */
+  static async updateTokenById(token, id) {
+    try {
+      await pool.query('UPDATE passport SET accessToken = ? WHERE id = ?', [token, id]);
+    } catch (err) {
+      console.error('Passport.updateTokenById error:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Находит пользователя по ID.
+   * @param {number} id - ID пользователя.
+   * @returns {Promise<Passport|null>}
+   */
+  static async findById(id) {
+    const [rows] = await pool.query('SELECT * FROM passport WHERE id = ?', [id]);
+    return rows.length > 0 ? new Passport(rows[0]) : null;
+  }
+
+  /**
+   * Находит пользователя по email.
+   * @param {string} email - Email пользователя.
+   * @returns {Promise<Passport|null>}
+   */
+  static async findByEmail(email) {
+    const [rows] = await pool.query('SELECT * FROM passport WHERE email = ?', [email]);
+    return rows.length > 0 ? new Passport(rows[0]) : null;
+  }
+
+  /**
+   * Находит пользователя по accessToken.
+   * @param {string} accessToken - Токен доступа.
+   * @returns {Promise<Passport|null>}
+   */
+  static async findByAccessToken(accessToken) {
+    const [rows] = await pool.query('SELECT * FROM passport WHERE accessToken = ?', [accessToken]);
+    return rows.length > 0 ? new Passport(rows[0]) : null;
+  }
+}
 
 module.exports = Passport;

@@ -1,79 +1,96 @@
-'use strict';
-var dbConn = require('../db');
+// src/models/user.js
+// 'use strict';
+const pool = require('../db'); // Подключаем пул соединений
 
-var User = function(user){
-    this.id = user.id;
-    this.passportId = user.passportId;
-    this.title = user.title;
-    this.age = user.age;
-    this.image = user.image;
-};
+class User {
+  constructor(data) {
+    this.id = data.id;
+    this.passportId = data.passportId;
+    this.title = data.title;
+    this.age = data.age;
+    this.image = data.image;
+    this.deletedAt = data.deletedAt;
+  }
 
-// Создание участника
-User.create = function (user, result) {
-  dbConn.query(
-    'INSERT INTO `user` (title) VALUES (?)',
-    [user.title],
-    function (err, res) {
-      if (err) {
-        console.log(err, 'err');
-        result(err);
-        return;
-      }
+  // --- СТАТИЧЕСКИЕ МЕТОДЫ ---
 
-      result(null, res.insertId);
-    },
-  );
-};
+  static async create(userData) {
+    try {
+      // В запросе используются только поля, которые есть в модели
+      const [result] = await pool.query('INSERT INTO `user` (title, passportId) VALUES (?, ?)', [
+        userData.title,
+        userData.passportId,
+      ]);
+      return result.insertId;
+    } catch (err) {
+      console.error('User.create error:', err);
+      throw err;
+    }
+  }
 
-// Обновление участника
-User.update = function(user, result){
-    dbConn.query("UPDATE user SET title=?, age=?, image=? WHERE id = ?", [user.title, user.age, user.image, user.id], function (err, res) {
-        result(null, res);
-    });
-};
+  static async update(userData) {
+    try {
+      await pool.query('UPDATE user SET title=?, age=?, image=? WHERE id = ?', [
+        userData.title,
+        userData.age,
+        userData.image,
+        userData.id,
+      ]);
+    } catch (err) {
+      console.error('User.update error:', err);
+      throw err;
+    }
+  }
 
-User.delete = function(id, result){
-    dbConn.query(`UPDATE user SET deletedAt = NOW() WHERE id = ?`, id, function (err, res) {
-      result(null, res);
-    });
-};
+  static async delete(id) {
+    try {
+      await pool.query('UPDATE user SET deletedAt = NOW() WHERE id = ?', [id]);
+    } catch (err) {
+      console.error('User.delete error:', err);
+      throw err;
+    }
+  }
 
+  static async findById(id) {
+    try {
+      const [rows] = await pool.query('SELECT * FROM `user` WHERE id = ?', [id]);
+      return rows.length > 0 ? rows[0] : null;
+    } catch (err) {
+      console.error('User.findById error:', err);
+      throw err;
+    }
+  }
 
-// Участник
-User.findById = function (id, result) {
-    dbConn.query("SELECT * from `user` where id = ?", id, function (err, res) {
-      console.log(err, res, 'err, res')
-        result(null, res?.length ? res[0] : undefined);
-    });
-};
-// Участники по паспорту
-User.findByPassportId = function (id, result) {
-    dbConn.query("SELECT * from user where passportId = ? AND deletedAt IS NULL", id, function (err, res) {
-        result(null, res || []);
-    });
-};
-// Участник
-// User.findByEmail = function (email, result) {
-//     dbConn.query("SELECT * from user where email = ? ", email, function (err, res) {
-//         result(null, res?.length ? res[0] : undefined);
-//     });
-// };
+  static async findByPassportId(passportId) {
+    try {
+      const [rows] = await pool.query(
+        'SELECT * FROM user WHERE passportId = ? AND deletedAt IS NULL',
+        [passportId],
+      );
+      return rows.map(row => new User(row));
+    } catch (err) {
+      console.error('User.findByPassportId error:', err);
+      throw err;
+    }
+  }
 
-const parse = (res) => {
-    return res
+  // Участники встречи (через JOIN с таблицей visit)
+  static async findByMeet(meetId) {
+    try {
+      const sql = `
+        SELECT DISTINCT user.*
+        FROM user
+        LEFT JOIN visit ON user.id = visit.userId
+        WHERE visit.meetId = ?
+          AND user.deletedAt IS NULL
+      `;
+      const [rows] = await pool.query(sql, [meetId]);
+      return rows.map(row => new User(row));
+    } catch (err) {
+      console.error('User.findByMeet error:', err);
+      throw err;
+    }
+  }
 }
-// Участники встречи
-User.findByMeet = function (meet, result) {
-    dbConn.query("SELECT * from user LEFT JOIN visit ON user.id = visit.userId where meetId = ?", meet.id, function (err, res) {
-        result(null, parse(res));
-    });
-};
-// Организатор
-User.findByProjectOne = function (project, result) {
-    dbConn.query("SELECT * from user where id = ?", project.userId, function (err, res) {
-        result(null, (res && res.length) ? parse(res)[0] : null);
-    });
-};
 
 module.exports = User;

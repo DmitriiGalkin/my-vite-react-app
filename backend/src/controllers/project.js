@@ -1,4 +1,5 @@
-'use strict';
+// controllers/projectController.js
+// 'use strict';
 
 const Project = require('../models/project');
 const User = require('../models/user');
@@ -7,173 +8,170 @@ const Visit = require('../models/visit');
 const Meet = require('../models/meet');
 const Place = require('../models/place');
 const Participation = require('../models/participation');
-const callModel = require('../utils/callModel');
 
-exports.create = async function (req, res) {
+// --- CRUD ОПЕРАЦИИ ---
+
+exports.create = async (req, res) => {
   try {
-    const project = new Project({ ...req.body, passportId: req.passport?.id });
-    const projectId = await callModel(Project.create, project);
-
-    res.json(projectId);
+    // Добавляем ID создателя из объекта авторизации
+    const projectData = { ...req.body, passportId: req.passport?.id };
+    const result = await Project.create(projectData);
+    res.status(201).json({ message: 'Проект создан', id: result.insertId });
   } catch (err) {
     console.error('project.create error:', err);
-
-    res.status(500).json({
-      error: true,
-      message: 'Не удалось создать проект',
-    });
+    res.status(500).json({ error: 'Ошибка при создании проекта' });
   }
 };
 
-exports.update = async function (req, res) {
+exports.update = async (req, res) => {
   try {
     const obj = new Project(req.body);
-
-    await callModel(Project.update, req.params.id, obj);
-
+    await Project.update(req.params.id, obj);
     res.json({ error: false, message: 'Проект обновлен' });
   } catch (err) {
     console.error('project.update error:', err);
-
-    res.status(500).json({
-      error: true,
-      message: 'Не удалось обновить проект',
-    });
+    res.status(500).json({ error: true, message: 'Не удалось обновить проект' });
   }
 };
 
-exports.delete = async function (req, res) {
+exports.delete = async (req, res) => {
   try {
-    const project = await callModel(Project.findById, req.params.id);
+    const projectId = req.params.id;
+    const userId = req.passport.id;
 
+    // Проверяем, существует ли проект
+    const project = await Project.findById(projectId);
     if (!project) {
-      return res.json({
-        error: true,
-        message: 'Проект с данным номером не существует',
-      });
+      return res.status(404).json({ error: true, message: 'Проект не найден' });
     }
 
-    if (project.passportId !== req.passport.id) {
-      return res.json({
-        error: true,
-        message: 'Вы не владелец проекта, чтобы принимать решение по удалению',
-      });
+    // Проверяем права доступа (владелец ли пользователь)
+    if (project.passportId !== userId) {
+      return res.status(403).json({ error: true, message: 'Недостаточно прав для удаления' });
     }
 
-    const meets = await callModel(Meet.findByProjectId, project.id);
+    // Удаляем связанные встречи (Meets)
+    const meets = await Meet.findByProjectId(projectId);
+    await Promise.all(meets.map(meet => Meet.delete(meet.id)));
 
-    await Promise.all(meets.map(meet => callModel(Meet.delete, meet.id)));
-    await callModel(Project.delete, project.id);
+    // Удаляем сам проект (логическое удаление)
+    await Project.delete(projectId);
 
     res.json({ error: false, message: 'Проект удален' });
   } catch (err) {
     console.error('project.delete error:', err);
-
-    res.status(500).json({
-      error: true,
-      message: 'Не удалось удалить проект',
-    });
+    res.status(500).json({ error: true, message: 'Не удалось удалить проект' });
   }
 };
 
-exports.findAll = async function (req, res) {
-  try {
-    const projects = await callModel(Project.findAll, {
-      ...req.query,
-      passportId: req.passport?.id,
-    });
+// --- ПОЛУЧЕНИЕ ДАННЫХ ---
 
-    const [places, participations, recommendMeets] = await Promise.all([
-      Promise.all(projects.map(project => callModel(Place.findById, project.placeId))),
-      Promise.all(projects.map(project => callModel(Participation.findByProjectId, project.id))),
-      Promise.all(
-        projects.map(project => callModel(Meet.findRecommendationByProjectId, project.id)),
-      ),
+exports.findAll = async (req, res) => {
+  try {
+    // Передаем параметры запроса и ID текущего пользователя
+    const params = { ...req.query, passportId: req.passport?.id };
+    const projects = await Project.findAll(params);
+
+    // Получаем дополнительные данные для каждого проекта параллельно
+    const [places, participationsArr, recommendMeetsArr] = await Promise.all([
+      // 1. Места (Places)
+      Promise.all(projects.map(p => Place.findById(p.placeId))),
+
+      // 2. Участники (Participations + Users)
+      Promise.all(projects.map(p => Participation.findByProjectId(p.id))),
+
+      // 3. Рекомендации (Meets + Visits + Users)
+      Promise.all(projects.map(p => Meet.findRecommendationByProjectId(p.id))),
     ]);
 
-    res.send(
-      projects.map((project, index) => ({
-        ...project,
-        place: places[index],
-        participations: participations[index],
-        recommendMeet: recommendMeets[index],
-      })),
-    );
+    // Формируем итоговый ответ, объединяя данные
+    const response = projects.map((project, index) => ({
+      ...project,
+      place: places[index],
+      participations: participationsArr[index],
+      recommendMeet: recommendMeetsArr[index],
+    }));
+
+    res.json(response);
   } catch (err) {
     console.error('project.findAll error:', err);
-
-    res.status(500).json({
-      error: true,
-      message: 'Не удалось получить проекты',
-    });
+    res.status(500).json({ error: true, message: 'Не удалось получить проекты' });
   }
 };
 
-exports.findById = async function (req, res) {
+exports.findById = async (req, res) => {
   try {
-    const project = await callModel(Project.findById, req.params.id);
+    const projectId = req.params.id;
 
+    // Получаем базовую информацию о проекте
+    const project = await Project.findById(projectId);
     if (!project) {
-      return res.status(400).send({
-        error: true,
-        message: 'Проект с таким номером не найден',
-      });
+      return res.status(404).json({ error: true, message: 'Проект не найден' });
     }
 
-    const [place, passport, participations, meets] = await Promise.all([
-      callModel(Place.findById, project.placeId),
-      callModel(Passport.findById, project.passportId),
-      callModel(Participation.findByProjectId, project.id),
-      callModel(Meet.findByProjectId, project.id),
+    // Получаем все связанные данные параллельно для ускорения
+    const [place, passport] = await Promise.all([
+      Place.findById(project.placeId),
+      Passport.findById(project.passportId),
     ]);
 
-    const [users, visits, visitUsers] = await Promise.all([
-      Promise.all(
-        participations.map(participation => callModel(User.findById, participation.userId)),
-      ),
-      Promise.all(meets.map(meet => callModel(Visit.findByMeet, meet))),
-      Promise.all(meets.map(meet => callModel(User.findByMeet, meet))),
+    const [participations, meets] = await Promise.all([
+      Participation.findByProjectId(projectId),
+      Meet.findByProjectId(projectId),
     ]);
 
-    res.send({
+    // Получаем пользователей для участников проекта
+    const usersForParticipations = await Promise.all(
+      participations.map(p => User.findById(p.userId)),
+    );
+
+    // Получаем данные для встреч (Visits и их Users)
+    const meetsWithDetails = await Promise.all(
+      meets.map(async meet => {
+        const [visits, usersForVisits] = await Promise.all([
+          Visit.findByMeet(meet.id),
+          User.findByMeet(meet.id),
+        ]);
+
+        // Добавляем пользователя к каждому визиту
+        const visitsWithUsers = visits.map((visit, idx) => ({
+          ...visit,
+          user: usersForVisits[idx],
+        }));
+
+        return { ...meet, visits: visitsWithUsers };
+      }),
+    );
+
+    // Формируем финальный объект ответа
+    res.json({
       ...project,
       passport,
       place,
-      meets: meets.map((meet, meetIndex) => ({
-        ...meet,
-        visits: visits[meetIndex].map((visit, visitIndex) => ({
-          ...visit,
-          user: visitUsers[meetIndex][visitIndex],
-        })),
-      })),
-      participations: participations.map((participation, participationIndex) => ({
-        ...participation,
-        user: users[participationIndex],
+      meets: meetsWithDetails,
+      participations: participations.map((p, idx) => ({
+        ...p,
+        user: usersForParticipations[idx],
       })),
     });
   } catch (err) {
     console.error('project.findById error:', err);
-
-    res.status(500).send({
-      error: true,
-      message: 'Не удалось получить проект',
-    });
+    res.status(500).send({ error: true, message: 'Не удалось получить проект' });
   }
 };
 
-exports.meta = async function (req, res) {
+// --- МЕТА ДАННЫЕ ---
+
+exports.meta = async (req, res) => {
   try {
-    const project = await callModel(Project.findById, req.params.id);
+    const project = await Project.findById(req.params.id);
 
     if (!project) {
-      return res.status(404).json({
-        error: true,
-        message: 'Проект не существует',
-      });
+      return res.status(404).json({ error: true, message: 'Проект не существует' });
     }
 
     res.json({
-      title: project.title + ' | Quantum',
+      title: `${project.title} | Quantum`,
       description: project.description,
       ogSiteName: 'Quantum | Проекты',
       ogType: 'article',
@@ -183,10 +181,6 @@ exports.meta = async function (req, res) {
     });
   } catch (err) {
     console.error('project.meta error:', err);
-
-    res.status(500).json({
-      error: true,
-      message: 'Не удалось получить meta проекта',
-    });
+    res.status(500).json({ error: true, message: 'Не удалось получить meta проекта' });
   }
 };

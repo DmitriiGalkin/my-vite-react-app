@@ -1,93 +1,99 @@
-'use strict';
-const dbConn = require('../db');
+// 'use strict';
+const pool = require('../db'); // Подключаем наш пул
 
-const ChatMessage = function (data) {
-  this.id = data.id;
-  this.chatId = data.chatId;
-  this.passportId = data.passportId;
-  this.role = data.role;
-  this.content = data.content;
-  this.source = data.source || 'text';
-  this.metadata = data.metadata ? JSON.stringify(data.metadata) : null;
-};
+// Конструктор для создания объекта сообщения
+class ChatMessage {
+  constructor(data) {
+    this.id = data.id;
+    this.chatId = data.chatId;
+    this.passportId = data.passportId;
+    this.role = data.role;
+    this.content = data.content;
+    this.source = data.source || 'text';
+    this.metadata = data.metadata ? JSON.stringify(data.metadata) : null;
+    // Добавим дату создания, если она приходит из БД
+    this.createdAt = data.createdAt;
+  }
 
-ChatMessage.create = function (data, result) {
-  dbConn.query(
-    `
+  // --- СТАТИЧЕСКИЕ МЕТОДЫ (для работы с БД) ---
+
+  /**
+   * Создает новое сообщение в базе данных.
+   * @param {Object} data - Данные для вставки.
+   * @returns {Promise<number>} - ID новой записи.
+   */
+  static async create(data) {
+    const sql = `
       INSERT INTO chatMessage
         (chatId, passportId, role, content, source, metadata)
       VALUES
         (?, ?, ?, ?, ?, ?)
-    `,
-    [
+    `;
+
+    const values = [
       data.chatId,
       data.passportId || null,
       data.role,
       data.content,
       data.source || 'text',
       data.metadata ? JSON.stringify(data.metadata) : null,
-    ],
-    function (err, res) {
-      if (err) {
-        console.error('ChatMessage.create error:', err);
-        return result(err);
-      }
+    ];
 
-      result(null, res && res.insertId);
-    },
-  );
-};
-
-ChatMessage.findById = function (id, result) {
-  dbConn.query('SELECT * FROM chatMessage WHERE id = ?', [id], function (err, res) {
-    if (err) {
-      console.error('ChatMessage.findById error:', err);
-      return result(err);
+    try {
+      const [result] = await pool.query(sql, values);
+      return result.insertId; // Возвращаем ID созданной записи
+    } catch (err) {
+      console.error('ChatMessage.create error:', err);
+      throw err; // Выбрасываем ошибку, чтобы её поймал контроллер
     }
+  }
 
-    result(null, res?.[0]);
-  });
-};
+  /**
+   * Находит сообщение по ID.
+   * @param {number} id - ID сообщения.
+   * @returns {Promise<ChatMessage|null>} - Объект сообщения или null.
+   */
+  static async findById(id) {
+    const [rows] = await pool.query('SELECT * FROM chatMessage WHERE id = ?', [id]);
+    return rows.length > 0 ? new ChatMessage(rows[0]) : null;
+  }
 
-ChatMessage.findByChatId = function (chatId, result) {
-  dbConn.query(
-    `
+  /**
+   * Находит все сообщения в чате.
+   * @param {number} chatId - ID чата.
+   * @returns {Promise<ChatMessage[]>} - Массив сообщений.
+   */
+  static async findByChatId(chatId) {
+    const sql = `
       SELECT *
       FROM chatMessage
       WHERE chatId = ?
       ORDER BY createdAt ASC, id ASC
-    `,
-    [chatId],
-    function (err, res) {
-      if (err) {
-        console.error('ChatMessage.findByChatId error:', err);
-        return result(err, []);
-      }
+    `;
+    const [rows] = await pool.query(sql, [chatId]);
+    return rows.map(row => new ChatMessage(row));
+  }
 
-      result(null, res || []);
-    },
-  );
-};
-
-ChatMessage.findLastByChatId = function (chatId, limit, result) {
-  dbConn.query(
-    `
+  /**
+   * Находит последние N сообщений в чате.
+   * @param {number} chatId - ID чата.
+   * @param {number} limit - Количество сообщений.
+   * @returns {Promise<ChatMessage[]>} - Массив сообщений в правильном порядке.
+   */
+  static async findLastByChatId(chatId, limit) {
+    const sql = `
       SELECT *
       FROM chatMessage
       WHERE chatId = ?
       ORDER BY createdAt DESC, id DESC
       LIMIT ?
-    `,
-    [chatId, limit],
-    function (err, res) {
-      if (err) {
-        console.error('ChatMessage.findLastByChatId error:', err);
-        return result(err, []);
-      }
+    `;
 
-      result(null, (res || []).reverse());
-    },
-  );
-};
+    const [rows] = await pool.query(sql, [chatId, limit]);
+
+    // Реверс нужен, чтобы вернуть сообщения в хронологическом порядке (старый -> новый)
+    return rows.reverse().map(row => new ChatMessage(row));
+  }
+}
 
 module.exports = ChatMessage;

@@ -1,173 +1,188 @@
-'use strict';
-var dbConn = require('../db');
-const Project = require('./project');
-var LocalDateTime = require('@js-joda/core').LocalDateTime;
-var ChronoUnit = require('@js-joda/core').ChronoUnit;
+// src/models/meet.js
+// 'use strict';
+const pool = require('../db'); // Подключаем пул
 
-var Meet = function(data){
+// Библиотеку @js-joda можно оставить, если она используется в других местах,
+// но для простого форматирования дат она здесь не обязательна.
+// const LocalDateTime = require('@js-joda/core').LocalDateTime;
+
+class Meet {
+  constructor(data) {
     this.id = data.id;
-    this.passportId = data.passportId; // Идентификатор наблюдателя
-    this.datetime = data.datetime;
-    this.duration = data.duration; // Длительность
-    this.projectId = data.projectId; // Идентификатор проекта
+    this.passportId = data.passportId;
+    this.projectId = data.projectId;
+    this.startedAt = data.startedAt; // Используем стандартное название поля
+    this.duration = data.duration;
     this.price = data.price;
-};
+    this.deletedAt = data.deletedAt;
 
-Meet.create = function (data, result) {
-  dbConn.query(
-    'INSERT INTO meet (projectId, price, duration, startedAt) VALUES (?, ?, ?, ?)',
-    [data.projectId, data.price, data.duration, data.startedAt],
-    function (err, res) {
-      console.log(err, 'err');
+    // Вычисляемое свойство для удобства (если нужно)
+    // this.datetime = data.datetime; // Если поле datetime есть в БД
+  }
 
-      if (err) {
-        result(err);
-        return;
-      }
+  // --- СТАТИЧЕСКИЕ МЕТОДЫ ---
 
-      result(null, res.insertId);
-    },
-  );
-};
-
-Meet.update = function(id, meet, result){
-    dbConn.query("UPDATE meet SET startedAt=?, duration=?, price=? WHERE id = ?", [meet.datetime, meet.duration, meet.price, id], function (err, res) {
-        result(null, res);
-    });
-};
-
-Meet.delete = function(id, result){
-    dbConn.query(`UPDATE meet SET deletedAt = NOW() WHERE id = ?`, id, function (err, res) {
-        result(null, res);
-    });
-};
-Meet.deleteByProjectId = function(id, result){
-    dbConn.query(`UPDATE meet SET deletedAt = NOW() WHERE projectId = ?`, id, function (err, res) {
-        result(null, res);
-    });
-};
-
-Meet.findAll = function (result) {
-    dbConn.query("SELECT *, date_format(startedAt, '%Y-%m-%d %H:%i:%s') as datetime from meet " +
-        "WHERE DATE(datetime) >= CURDATE() " +
-        // "AND deleted IS NULL " +
-        // "AND ST_Distance_Sphere(point(" + x + ", " + y + "), point(x, y)) < " + RADIUS + " " +
-        "ORDER BY datetime", function (err, res) {
-        result(null, res || []);
-    });
-};
-
-Meet.findById = function (id, result) {
-    dbConn.query("SELECT *, date_format(startedAt, '%Y-%m-%d %H:%i:%s') as datetime FROM meet WHERE id = ?", id, function (err, res) {
-        result(null, res[0]);
-    });
-};
-Meet.findByProjectId = function (id, result) {
-    dbConn.query("SELECT meet.*, date_format(startedAt, '%Y-%m-%d %H:%i:%s') as startedAt FROM meet WHERE projectId = ? AND DATE(startedAt) >= CURDATE() AND deletedAt IS NULL ORDER BY meet.startedAt", id, function (err, res) {
-        console.log(err,'err')
-        result(null, res || []);
-    });
-};
-
-/**
- * Поиск одной рекомендованной пользователю встречи
- */
-Meet.findRecommendationByProjectId = function (id, result) {
-  dbConn.query(
-    "SELECT meet.*, date_format(startedAt, '%Y-%m-%d %H:%i:%s') as startedAt FROM meet WHERE projectId = ? AND DATE(startedAt) >= CURDATE() AND deletedAt IS NULL ORDER BY meet.startedAt LIMIT 1",
-    id,
-    function (err, res) {
-      result(null, res?.[0]);
-    },
-  );
-};
-
-Meet.findByUserId = function (id, result) {
-    dbConn.query(
-      "SELECT meet.*, date_format(startedAt, '%Y-%m-%d %H:%i:%s') as startedAt FROM meet LEFT JOIN participation ON participation.projectId = meet.projectId WHERE participation.userId = ? AND deletedAt IS NULL AND DATE(startedAt) >= CURDATE()",
-      id,
-      function (err, res) {
-        result(null, res || []);
-      },
-    );
-};
-// Meet.findByPassportId = function (id, result) {
-//     const l =
-//       "SELECT meet.*, date_format(datetime, '%Y-%m-%d %H:%i:%s') as datetime FROM meet WHERE passportId = ? AND deletedAt IS NULL AND DATE(startedAt) >= CURDATE()";
-//     console.log(l,'l')
-//     dbConn.query(l, id, function (err, res) {
-//         console.log(res,'res')
-//         result(null, res || []);
-//     });
-// };
-
-// Встречи участника
-// Meet.findAllByUserId2 = (id) => function (result) {
-//     dbConn.query("SELECT * FROM user_meet WHERE userId = ?", id, function (err, res) {
-//         result(null, res);
-//     });
-// };
-// Встречи участника
-Meet.findAllByUserId = () => function (result) {
-    dbConn.query(
-      "SELECT *, date_format(startedAt, '%Y-%m-%d %H:%i:%s') as startedAt from meet where DATE(startedAt) >= CURDATE() ORDER BY meet.startedAt",
-      function (err, res) {
-        //console.log(err,'err')
-        result(null, res || []);
-      },
-    );
-};
-// Встречи на которые пользователь принимает участие
-// Meet.findUserMeet = function(userId, result){
-//     dbConn.query(
-//       "SELECT *, date_format(startedAt, '%Y-%m-%d %H:%i:%s') as startedAt FROM meet LEFT JOIN user_meet ON user_meet.meetId = meet.id WHERE user_meet.userId = ? ORDER BY datetime DESC",
-//       [userId],
-//       function (err, res) {
-//         result(null, res.length ? res : []);
-//       },
-//     );
-// };
-
-//(1 = Sunday, 2 = Monday, …, 7 = Saturday)
-function toODBC (l) {
-    switch (l) {
-        case 0: {
-            return 2
-        }
-        case 1: {
-            return 3
-        }
-        case 2: {
-            return 4
-        }
-        case 3: {
-            return 5
-        }
-        case 4: {
-            return 6
-        }
-        case 5: {
-            return 7
-        }
-        case 6: {
-            return 1
-        }
+  static async create(data) {
+    try {
+      const [result] = await pool.query(
+        'INSERT INTO meet (projectId, price, duration, startedAt) VALUES (?, ?, ?, ?)',
+        [data.projectId, data.price, data.duration, data.startedAt]
+      );
+      return result.insertId;
+    } catch (err) {
+      console.error('Meet.create error:', err);
+      throw err;
     }
-}
+  }
 
-Meet.check = function (timer, result) {
-    const day = toODBC(timer.dayOfWeek)
-    dbConn.query(
-      'SELECT *, DAYOFWEEK(startedAt) as pm FROM meet WHERE DATE(startedAt) >= CURDATE() AND DAYOFWEEK(startedAt) = ? AND projectId = ?',
-      [day, timer.projectId],
-      function (err, res) {
-        if (!res.length) {
-          result(null, timer);
-        } else {
-          result(null);
-        }
-      },
-    );
-};
+  static async update(id, meetData) {
+    try {
+      await pool.query(
+        'UPDATE meet SET startedAt=?, duration=?, price=? WHERE id = ?',
+        [meetData.startedAt, meetData.duration, meetData.price, id]
+      );
+    } catch (err) {
+      console.error('Meet.update error:', err);
+      throw err;
+    }
+  }
+
+  static async delete(id) {
+    try {
+      await pool.query('UPDATE meet SET deletedAt = NOW() WHERE id = ?', [id]);
+    } catch (err) {
+      console.error('Meet.delete error:', err);
+      throw err;
+    }
+  }
+
+  static async deleteByProjectId(projectId) {
+    try {
+      await pool.query('UPDATE meet SET deletedAt = NOW() WHERE projectId = ?', [projectId]);
+    } catch (err) {
+      console.error('Meet.deleteByProjectId error:', err);
+      throw err;
+    }
+  }
+
+  // Находит все будущие встречи (начиная с сегодняшнего дня)
+  static async findAll() {
+    try {
+      const [rows] = await pool.query(`
+        SELECT *
+        FROM meet
+        WHERE startedAt >= CURDATE()
+          AND deletedAt IS NULL
+        ORDER BY startedAt
+      `);
+      return rows.map(row => new Meet(row));
+    } catch (err) {
+      console.error('Meet.findAll error:', err);
+      throw err;
+    }
+  }
+
+  static async findById(id) {
+    try {
+      const [rows] = await pool.query('SELECT * FROM meet WHERE id = ?', [id]);
+      return rows.length > 0 ? new Meet(rows[0]) : null;
+    } catch (err) {
+      console.error('Meet.findById error:', err);
+      throw err;
+    }
+  }
+
+  static async findByProjectId(projectId) {
+    try {
+      const [rows] = await pool.query(`
+        SELECT *
+        FROM meet
+        WHERE projectId = ?
+          AND startedAt >= CURDATE()
+          AND deletedAt IS NULL
+        ORDER BY startedAt
+      `, [projectId]);
+      return rows.map(row => new Meet(row));
+    } catch (err) {
+      console.error('Meet.findByProjectId error:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Поиск одной рекомендованной встречи для проекта.
+   * Это просто первая будущая встреча.
+   */
+  static async findRecommendationByProjectId(projectId) {
+    try {
+      const [rows] = await pool.query(`
+        SELECT *
+        FROM meet
+        WHERE projectId = ?
+          AND startedAt >= CURDATE()
+          AND deletedAt IS NULL
+        ORDER BY startedAt
+        LIMIT 1
+      `, [projectId]);
+      return rows.length > 0 ? new Meet(rows[0]) : null;
+    } catch (err) {
+      console.error('Meet.findRecommendationByProjectId error:', err);
+      throw err;
+    }
+  }
+
+// Встречи, в которых участвует пользователь (через участие в проекте)
+  static async findByUserId(userId) {
+    try {
+      const sql = `
+        SELECT DISTINCT m.*
+        FROM meet m
+               JOIN participation p ON p.projectId = m.projectId
+        WHERE p.userId = ?
+          AND m.startedAt >= CURDATE()
+          AND m.deletedAt IS NULL
+        ORDER BY m.startedAt
+      `;
+      const [rows] = await pool.query(sql, [userId]);
+      return rows.map(row => new Meet(row));
+    } catch (err) {
+      console.error('Meet.findByUserId error:', err);
+      throw err;
+    }
+  }
+
+
+  /**
+   * Проверка возможности создания встречи по расписанию (таймеру).
+   * Возвращает таймер, если подходящей встречи нет.
+   */
+  static async check(timer) {
+    try {
+      // MySQL-функция DAYOFWEEK возвращает: 1=Вс, 2=Пн, ... , 7=Сб.
+      // Ваша функция toODBC преобразовывала из JS (0=Вс) в этот формат.
+      // Для простоты и безопасности используем встроенную функцию MySQL.
+      const dayOfWeekInJS = timer.dayOfWeek; // Предполагаем, что здесь 0=Вс, 1=Пн...
+      const dayOfWeekForMySQL = dayOfWeekInJS === 0 ? 1 : dayOfWeekInJS + 1;
+
+      const [rows] = await pool.query(`
+        SELECT *
+        FROM meet
+        WHERE projectId = ?
+          AND DAYOFWEEK(startedAt) = ?
+          AND startedAt >= CURDATE()
+          AND deletedAt IS NULL
+        LIMIT 1
+      `, [timer.projectId, dayOfWeekForMySQL]);
+
+      // Если встречи нет (rows.length === 0), возвращаем таймер.
+      // Если есть — возвращаем null или пустой объект.
+      return rows.length === 0 ? timer : null;
+
+    } catch (err) {
+      console.error('Meet.check error:', err);
+      throw err;
+    }
+  }
+}
 
 module.exports = Meet;

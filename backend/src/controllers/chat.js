@@ -1,8 +1,5 @@
 // controllers/chatController.js
-// 'use strict';
-import GigaChat, { detectImage  } from 'gigachat';
-
-// Импортируем модели и функции из других файлов
+import GigaChat, { detectImage } from 'gigachat';
 import Chat from '../models/chat.js';
 import ChatMessage from '../models/chatMessage.js';
 import {
@@ -26,219 +23,202 @@ import { v4 as uuid } from 'uuid';
 
 // --- Функции контроллера ---
 
-export const createMessage = async function (req, res) {
-  try {
-    // Проверка авторизации
-    if (!req.passport) {
-      return res.status(401).json({
-        error: true,
-        message: 'Требуется авторизация',
+// Все функции объявлены как const и собраны в объект в конце файла
+
+export default {
+  createMessage: async (req, res) => {
+    try {
+      // Проверка авторизации
+      if (!req.passport) {
+        return res.status(401).json({
+          error: true,
+          message: 'Требуется авторизация',
+        });
+      }
+
+      const message = String(req.body.message || '').trim();
+      const chatId = req.body.chatId || null;
+      const source = req.body.source === 'voice' ? 'voice' : 'text';
+
+      // Валидация сообщения
+      if (!message) {
+        return res.status(400).json({
+          error: true,
+          message: 'Сообщение не может быть пустым',
+        });
+      }
+
+      // 1. Получаем или создаем чат
+      const chat = await getOrCreateChat({
+        chatId,
+        passportId: req.passport.id,
+        firstMessage: message,
       });
-    }
 
-    const message = String(req.body.message || '').trim();
-    const chatId = req.body.chatId || null;
-    const source = req.body.source === 'voice' ? 'voice' : 'text';
-
-    // Валидация сообщения
-    if (!message) {
-      return res.status(400).json({
-        error: true,
-        message: 'Сообщение не может быть пустым',
+      // 2. Сохраняем сообщение пользователя
+      const userMessageId = await ChatMessage.create({
+        chatId: chat.id,
+        passportId: req.passport.id,
+        content: message,
+        source,
+        role: 'user',
       });
-    }
 
-    // 1. Получаем или создаем чат
-    const chat = await getOrCreateChat({
-      chatId,
-      passportId: req.passport.id,
-      firstMessage: message,
-    });
+      const userMessage = await ChatMessage.findById(userMessageId);
 
-    // 2. Сохраняем сообщение пользователя
-    const userMessageId = await ChatMessage.create({
-      chatId: chat.id,
-      passportId: req.passport.id,
-      content: message,
-      source,
-      role: 'user',
-    });
+      // 3. Проверка на команду создания проекта
+      if (isCreateProjectIdeaCommand(message)) {
+        const recentMessages = await ChatMessage.findLastByChatId(chat.id, 10);
+        const idea = findLastProjectIdea(recentMessages);
 
-    // Находим пользователя, который отправил сообщение (для логики сервиса)
-    const userMessage = await ChatMessage.findById(userMessageId);
+        if (!idea) {
+          const assistantMessage = await createAssistantMessage({
+            chatId: chat.id,
+            content: 'Не нашёл готовой идеи проекта в переписке. Давайте сначала сформулируем её.',
+          });
+          await Chat.touch(chat.id);
+          return res.json({
+            chatId: chat.id,
+            messages: [normalizeMessage(userMessage), normalizeMessage(assistantMessage)],
+          });
+        }
 
-    // 3. Проверка на команду создания проекта
-    if (isCreateProjectIdeaCommand(message)) {
-      const recentMessages = await ChatMessage.findLastByChatId(chat.id, 10);
-      const idea = findLastProjectIdea(recentMessages);
+        const createdProjectId = await createProjectFromIdea({
+          idea,
+          passportId: req.passport.id,
+        });
 
-      if (!idea) {
-        // Если идеи нет, отвечаем ассистентом
         const assistantMessage = await createAssistantMessage({
           chatId: chat.id,
-          content: 'Не нашёл готовую идею проекта в переписке. Давайте сначала сформулируем её.',
+          content:
+            'Поздравляем! Идея проекта создана. Мы уже начали подбирать куратора для идеи проекта вашего ребенка. После того как куратор проекта будет назначен, он возмет на себя ответственность по оформлению проекта, выбору места и времени проведения встреч по проекту.',
+          metadata: {
+            ...idea,
+            id: createdProjectId,
+            passportId: req.passport.id,
+          },
         });
+
         await Chat.touch(chat.id);
+
         return res.json({
           chatId: chat.id,
           messages: [normalizeMessage(userMessage), normalizeMessage(assistantMessage)],
         });
       }
 
-      // Если идея есть, создаем проект
-      const createdProjectId = await createProjectFromIdea({
-        idea,
-        passportId: req.passport.id,
+      // 4. Генерация ответа ассистента
+      const recentMessages = await ChatMessage.findLastByChatId(chat.id, 10);
+
+      // --- Блок генерации изображения (пример использования GigaChat) ---
+      // Этот блок можно вынести в отдельную функцию или сервис, если он нужен постоянно.
+      try {
+        const giga = new GigaChat({
+          credentials:
+            'MDE5ZTNjODktMDk2OC03NzNkLWEwYTMtYjAwYTMxY2Q4NzEyOmI5NjRkNmQzLWYwMjYtNDQ5MC04MDJmLTMyNzIyNzc5ODg3ZQ==',
+        });
+
+        const imageResponse = await giga.chat({
+          messages: [
+            {
+              role: 'user',
+              content: 'Сгенерируй изображение котика 50x50 px',
+            },
+          ],
+          function_call: 'auto',
+        });
+
+        const detectedImage = detectImage(imageResponse.choices[0]?.message.content ?? '');
+        if (detectedImage && detectedImage.uuid) {
+          const image = await giga.getImage(detectedImage.uuid);
+          const buffer = Buffer.from(image.content, 'binary');
+
+          await S3.send(
+            new PutObjectCommand({
+              Bucket: 'quantum-education',
+              Key: uuid() + '.jpg',
+              Body: buffer,
+              ContentType: 'image/jpeg',
+            }),
+          );
+        }
+      } catch (err) {
+        console.error('Ошибка при генерации картинки:', err);
+      }
+
+      // --- Конец блока генерации изображения ---
+
+      const assistantContent = await generateAssistantAnswer({
+        messages: recentMessages,
+        chat,
+        passport: req.passport,
       });
 
       const assistantMessage = await createAssistantMessage({
         chatId: chat.id,
-        content:
-          'Поздравляем! Идея проекта создана. Мы уже начали подбирать куратора для идеи проекта вашего ребенка. После того как куратор проекта будет назначен, он возмет на себя ответственность по оформлению проекта, выбору места и времени проведения встреч по проекту.startsonar.bat',
-        metadata: {
-          ...idea,
-          id: createdProjectId,
-          passportId: req.passport.id,
-        },
+        content: assistantContent.message,
+        metadata: assistantContent.status === 'idea_ready' ? assistantContent.idea : null,
       });
 
       await Chat.touch(chat.id);
 
-      return res.json({
+      const freshUserMessage = await ChatMessage.findById(userMessageId);
+
+      res.json({
         chatId: chat.id,
-        messages: [normalizeMessage(userMessage), normalizeMessage(assistantMessage)],
+        messages: [normalizeMessage(freshUserMessage), normalizeMessage(assistantMessage)],
+      });
+    } catch (err) {
+      console.error('chat.createMessage error:', err);
+      res.status(err.status || 500).json({
+        error: true,
+        message: err.message || 'Не удалось отправить сообщение',
       });
     }
+  },
 
-    // 4. Генерация ответа ассистента (если это не команда)
-    const recentMessages = await ChatMessage.findLastByChatId(chat.id, 10);
-
-    // Пример использования GigaChat (вы оставили его в коде)
-    const giga = new GigaChat({
-      credentials:
-        'MDE5ZTNjODktMDk2OC03NzNkLWEwYTMtYjAwYTMxY2Q4NzEyOmI5NjRkNmQzLWYwMjYtNDQ5MC04MDJmLTMyNzIyNzc5ODg3ZQ==',
-    });
-
-    // Эта часть просто логирует ответ в консоль. Если она не нужна, можно удалить.
-    // 1. Создаем промпт (описание того, что хотим увидеть)
-
+  findMessages: async (req, res) => {
     try {
-      // 2. Вызываем метод generateImage
-      const imageResponse = await giga.chat({
-        messages: [
-          {
-            role: 'user',
-            content: 'Сгенерируй изображение котика 50x50 px',
-          },
-        ],
-        function_call: 'auto',
-      });
-
-      // 3. Получаем результат
-      // Обычно метод возвращает объект с массивом изображений (images)
-      const detectedImage = detectImage(imageResponse.choices[0]?.message.content ?? '');
-      if (detectedImage && detectedImage.uuid) {
-        const image = await giga.getImage(detectedImage.uuid);
-        console.log(image, 'image');
-        const buffer = Buffer.from(image.content, 'binary');
-
-        await S3.send(
-          new PutObjectCommand({
-            Bucket: 'quantum-education',
-            Key: uuid() + '.jpg',
-            Body: buffer,
-            ContentType: 'image/jpeg', // или нужный mime
-          }),
-        );
-      } else {
-        console.log(imageResponse.choices[0]?.message.content);
-        console.log('Изображение не сгенерировалось');
+      if (!req.passport) {
+        return res.status(401).json({ error: true, message: 'Требуется авторизация' });
       }
 
-      // Теперь вы можете сохранить эту ссылку в базу данных или отправить пользователю
-      // const assistantMessage = await createAssistantMessage({
-      //   chatId: chat.id,
-      //   content: `Сгенерировал картинку по запросу: "${imagePrompt}"`,
-      //   // metadata: { imageUrl: generatedImageUrl } // Если нужно сохранить ссылку
-      // });
+      const chat = await Chat.findByIdAndPassportId(req.params.id, req.passport.id);
+
+      if (!chat) {
+        return res
+          .status(404)
+          .json({ error: true, message: 'Чат не найден или у вас нет доступа' });
+      }
+
+      const messages = await ChatMessage.findByChatId(chat.id);
+
+      res.json(messages.map(normalizeMessage));
     } catch (err) {
-      console.error('Ошибка при генерации картинки:', err);
+      console.error('chat.findMessages error:', err);
+      res.status(500).json({ error: true, message: 'Не удалось получить сообщения' });
     }
+  },
 
-    const assistantContent = await generateAssistantAnswer({
-      messages: recentMessages,
-      chat,
-      passport: req.passport,
-    });
+  findAll: async (req, res) => {
+    try {
+      if (!req.passport) {
+        return res.status(401).json({
+          error: true,
+          message: 'Требуется авторизация',
+        });
+      }
 
-    // Сохраняем ответ ассистента в БД
-    const assistantMessage = await createAssistantMessage({
-      chatId: chat.id,
-      content: assistantContent.message,
-      metadata: assistantContent.status === 'idea_ready' ? assistantContent.idea : null,
-    });
+      const chats = await Chat.findAllByPassportId(req.passport.id);
 
-    // Обновляем время последнего изменения чата
-    await Chat.touch(chat.id);
+      res.json(chats);
+    } catch (err) {
+      console.error('chat.findAll error:', err);
 
-    // Отправляем ответ клиенту (берем из БД, чтобы быть уверенными в данных)
-    const freshUserMessage = await ChatMessage.findById(userMessageId);
-
-    res.json({
-      chatId: chat.id,
-      messages: [normalizeMessage(freshUserMessage), normalizeMessage(assistantMessage)],
-    });
-  } catch (err) {
-    console.error('chat.createMessage error:', err);
-    res.status(err.status || 500).json({
-      error: true,
-      message: err.message || 'Не удалось отправить сообщение',
-    });
-  }
-};
-
-export const findMessages = async function (req, res) {
-  try {
-    if (!req.passport) {
-      return res.status(401).json({ error: true, message: 'Требуется авторизация' });
-    }
-
-    // Проверяем, принадлежит ли чат пользователю (безопасность)
-    const chat = await Chat.findByIdAndPassportId(req.params.id, req.passport.id);
-
-    if (!chat) {
-      return res.status(404).json({ error: true, message: 'Чат не найден или у вас нет доступа' });
-    }
-
-    const messages = await ChatMessage.findByChatId(chat.id);
-
-    res.json(messages.map(normalizeMessage));
-  } catch (err) {
-    console.error('chat.findMessages error:', err);
-    res.status(500).json({ error: true, message: 'Не удалось получить сообщения' });
-  }
-};
-
-export const findAll = async function (req, res) {
-  try {
-    if (!req.passport) {
-      return res.status(401).json({
+      res.status(500).json({
         error: true,
-        message: 'Требуется авторизация',
+        message: 'Не удалось получить список чатов',
       });
     }
-
-    // Исправлено с callModel(...) на прямой вызов метода модели.
-    // Если callModel — это ваша функция-обертка, импортируйте ее и используйте.
-    const chats = await Chat.findAllByPassportId(req.passport.id);
-
-    res.json(chats);
-  } catch (err) {
-    console.error('chat.findAll error:', err);
-
-    res.status(500).json({
-      error: true,
-      message: 'Не удалось получить список чатов',
-    });
-  }
+  },
 };

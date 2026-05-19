@@ -1,6 +1,4 @@
-// db.js
-// 'use strict';
-const mysql = require('mysql2/promise');
+import mysql from 'mysql2/promise';
 
 // Создаем пул соединений
 const pool = mysql.createPool({
@@ -46,4 +44,4 @@ pool.on('error', err => {
   console.error('❗ Ошибка в пуле соединений MySQL:', err);
 });
 
-module.exports = pool;
+export default pool;

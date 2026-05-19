@@ -1,6 +1,4 @@
-// src/models/Chat.js
-// 'use strict';
-const pool = require('../db'); // Подключаем пул соединений
+import pool from '../db.js'; // Импортируем пул соединений
 
 // Используем класс для лучшей структуры
 class Chat {
@@ -145,4 +143,4 @@ class Chat {
   }
 }
 
-module.exports = Chat;
+export default Chat;

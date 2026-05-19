@@ -1,6 +1,4 @@
-// src/models/participation.js
-// 'use strict';
-const pool = require('../db'); // Подключаем пул соединений
+import pool from '../db.js'; // Импортируем пул соединений
 
 class Participation {
   constructor(data) {
@@ -107,4 +105,4 @@ class Participation {
   }
 }
 
-module.exports = Participation;
+export default Participation;

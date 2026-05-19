@@ -1,6 +1,4 @@
-// src/models/passport.js
-// 'use strict';
-const pool = require('../db'); // Подключаем пул соединений
+import pool from '../db.js'; // Импортируем пул соединений
 
 class Passport {
   constructor(data) {
@@ -93,4 +91,4 @@ class Passport {
   }
 }
 
-module.exports = Passport;
+export default Passport;

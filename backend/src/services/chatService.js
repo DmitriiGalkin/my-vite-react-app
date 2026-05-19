@@ -1,8 +1,5 @@
-// services/chatService.js
-// 'use strict';
-
-const Chat = require('../models/chat');
-const ChatMessage = require('../models/chatMessage');
+import Chat from '../models/chat.js';
+import ChatMessage from '../models/chatMessage.js';
 
 // Эта функция остается без изменений, так как она просто форматирует данные.
 function normalizeMessage(row) {
@@ -62,7 +59,7 @@ async function createAssistantMessage({ chatId, content, metadata = null }) {
   return ChatMessage.findById(assistantMessageId);
 }
 
-module.exports = {
+export {
   normalizeMessage,
   getOrCreateChat,
   createAssistantMessage,

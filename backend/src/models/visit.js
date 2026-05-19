@@ -1,6 +1,4 @@
-// src/models/visit.js
-// 'use strict';
-const pool = require('../db'); // Подключаем пул соединений
+import pool from '../db.js'; // Импортируем пул соединений
 
 class Visit {
   constructor(data) {
@@ -118,4 +116,4 @@ class Visit {
   }
 }
 
-module.exports = Visit;
+export default Visit;

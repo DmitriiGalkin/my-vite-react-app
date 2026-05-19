@@ -1,6 +1,4 @@
-// src/models/meet.js
-// 'use strict';
-const pool = require('../db'); // Подключаем пул
+import pool from '../db.js'; // Импортируем пул соединений
 
 // Библиотеку @js-joda можно оставить, если она используется в других местах,
 // но для простого форматирования дат она здесь не обязательна.
@@ -185,4 +183,4 @@ class Meet {
   }
 }
 
-module.exports = Meet;
+export default Meet;

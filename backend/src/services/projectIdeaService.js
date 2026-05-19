@@ -1,7 +1,4 @@
-// services/projectIdeaService.js
-// 'use strict';
-
-const Project = require('../models/project');
+import Project from '../models/project.js';
 
 function isCreateProjectIdeaCommand(message) {
   const normalizedMessage = message.trim().toLowerCase();
@@ -63,7 +60,7 @@ async function createProjectFromIdea({ idea, passportId }) {
   });;
 }
 
-module.exports = {
+export {
   isCreateProjectIdeaCommand,
   findLastProjectIdea,
   createProjectFromIdea,

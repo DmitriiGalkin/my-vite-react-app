@@ -1,5 +1,4 @@
-// 'use strict';
-const pool = require('../db'); // Подключаем наш пул
+import pool from '../db.js'; // Импортируем пул соединений
 
 // Конструктор для создания объекта сообщения
 class ChatMessage {
@@ -96,4 +95,4 @@ class ChatMessage {
   }
 }
 
-module.exports = ChatMessage;
+export default ChatMessage;

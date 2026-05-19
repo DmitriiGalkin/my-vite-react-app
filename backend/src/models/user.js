@@ -1,6 +1,4 @@
-// src/models/user.js
-// 'use strict';
-const pool = require('../db'); // Подключаем пул соединений
+import pool from '../db.js'; // Импортируем пул соединений
 
 class User {
   constructor(data) {
@@ -93,4 +91,4 @@ class User {
   }
 }
 
-module.exports = User;
+export default User;

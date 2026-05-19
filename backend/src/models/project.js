@@ -1,6 +1,4 @@
-// src/models/project.js
-// 'use строгий';
-const pool = require('../db'); // Подключаем пул
+import pool from '../db.js'; // Импортируем пул соединений
 
 class Project {
   constructor(data) {
@@ -116,4 +114,4 @@ class Project {
   }
 }
 
-module.exports = Project;
+export default Project;

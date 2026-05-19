@@ -16,8 +16,41 @@ export async function generateAssistantAnswer({ messages }) {
   try {
     // 2. Проверка наличия ключа доступа ПЕРЕД отправкой запроса
     if (!process.env.GIGA_CREDENTIALS) {
-      throw new Error('Ошибка конфигурации: Не найден ключ GIGA_CREDENTIALS в переменных окружения.');
+      throw new Error(
+        'Ошибка конфигурации: Не найден ключ GIGA_CREDENTIALS в переменных окружения.',
+      );
     }
+
+    // Определяем схему для самой идеи
+    const ideaSchema = {
+      type: 'object',
+      properties: {
+        title: { type: 'string' },
+        description: { type: 'string' },
+      },
+      required: ['title', 'description'],
+    };
+
+    // Определяем схему для финального ответа
+    const responseSchema = {
+      type: 'object',
+      properties: {
+        status: { type: 'string', enum: ['success', 'error'] },
+        idea: { $ref: '#/definitions/Idea' }, // Ссылаемся на схему выше
+      },
+      required: ['status', 'idea'],
+      definitions: {
+        Idea: ideaSchema,
+      },
+    };
+
+    // Название функции должно быть в стиле snake_case или camelCase
+    const generateIdeaTool = {
+      name: 'generate_project_idea',
+      description:
+        'Генерирует идею образовательного проекта для ребенка на основе запроса родителя.',
+      parameters: responseSchema, // Схема входных параметров (в данном случае это и есть наш ответ)
+    };
 
     // 3. Отправка запроса к API
     const resp = await gigaClient.chat({
@@ -49,6 +82,10 @@ export async function generateAssistantAnswer({ messages }) {
         },
         ...messages.map(m => ({ role: m.role, content: m.content })),
       ],
+      // Передаем массив доступных инструментов
+      tools: [generateIdeaTool],
+      // Указываем, что модель *должна* использовать инструмент, если нужен ответ
+      tool_choice: 'required',
     });
 
     // 4. Проверка структуры ответа от API
@@ -79,7 +116,6 @@ export async function generateAssistantAnswer({ messages }) {
     }
 
     return parsedData;
-
   } catch (error) {
     // --- БЛОК ЛОГИРОВАНИЯ И ВОЗВРАТА ОШИБКИ ---
 

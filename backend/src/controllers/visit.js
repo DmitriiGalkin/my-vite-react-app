@@ -6,8 +6,8 @@ function getPassportUserIds(req) {
 }
 
 export default {
-  findVisitAndMeet: async (req, res) => {
-    const visit = await Visit.findById(visitId);
+  findVisitAndMeet: async () => {
+    const visit = await Visit.findById(1);
 
     if (!visit) {
       const error = new Error('Участие не существует');

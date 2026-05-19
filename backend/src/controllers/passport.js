@@ -141,8 +141,7 @@ export default {
       req.passport = passport;
 
       // Получаем связанных пользователей и также кладем в запрос
-      const users = await User.findByPassportId(passport.id);
-      req.users = users;
+      req.users = await User.findByPassportId(passport.id);
 
       next(); // Передаем управление следующему middleware/роуту
     } catch (err) {

@@ -57,7 +57,7 @@ async function createProjectFromIdea({ idea, passportId }) {
     description: idea.description || '',
     image,
     placeId: idea.placeId || null,
-  });;
+  });
 }
 
 export {

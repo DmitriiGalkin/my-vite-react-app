@@ -28,7 +28,6 @@
     "js-joda": "^1.11.0",
     "jsonwebtoken": "^9.0.0",
     "mime": "^3.0.0",
-    "multer": "^1.4.5-lts.1",
     "mysql2": "^3.2.0",
     "node-static": "^0.7.11",
     "passport": "^0.6.0",

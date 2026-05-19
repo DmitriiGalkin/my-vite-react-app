@@ -1,6 +1,6 @@
 // controllers/chatController.js
 // 'use strict';
-import GigaChat from 'gigachat';
+import GigaChat, { detectImage  } from 'gigachat';
 
 // Импортируем модели и функции из других файлов
 import Chat from '../models/chat.js';
@@ -17,6 +17,12 @@ import {
   createProjectFromIdea,
 } from '../services/projectIdeaService.js';
 import { generateProjectImage } from '../services/imageGenerationService.js';
+import * as fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import S3 from '../s3.js';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { v4 as uuid } from 'uuid';
 
 // --- Функции контроллера ---
 
@@ -114,15 +120,50 @@ export const createMessage = async function (req, res) {
     });
 
     // Эта часть просто логирует ответ в консоль. Если она не нужна, можно удалить.
-    const resp = await giga.chat({
-      messages: [
-        {
-          role: 'user',
-          content: 'Привет! Как дела?',
-        },
-      ],
-    });
-    console.log(resp.choices[0]?.message.content);
+    // 1. Создаем промпт (описание того, что хотим увидеть)
+
+    try {
+      // 2. Вызываем метод generateImage
+      const imageResponse = await giga.chat({
+        messages: [
+          {
+            role: 'user',
+            content: 'Сгенерируй изображение котика 50x50 px',
+          },
+        ],
+        function_call: 'auto',
+      });
+
+      // 3. Получаем результат
+      // Обычно метод возвращает объект с массивом изображений (images)
+      const detectedImage = detectImage(imageResponse.choices[0]?.message.content ?? '');
+      if (detectedImage && detectedImage.uuid) {
+        const image = await giga.getImage(detectedImage.uuid);
+        console.log(image, 'image');
+        const buffer = Buffer.from(image.content, 'binary');
+
+        await S3.send(
+          new PutObjectCommand({
+            Bucket: 'quantum-education',
+            Key: uuid() + '.jpg',
+            Body: buffer,
+            ContentType: 'image/jpeg', // или нужный mime
+          }),
+        );
+      } else {
+        console.log(imageResponse.choices[0]?.message.content);
+        console.log('Изображение не сгенерировалось');
+      }
+
+      // Теперь вы можете сохранить эту ссылку в базу данных или отправить пользователю
+      // const assistantMessage = await createAssistantMessage({
+      //   chatId: chat.id,
+      //   content: `Сгенерировал картинку по запросу: "${imagePrompt}"`,
+      //   // metadata: { imageUrl: generatedImageUrl } // Если нужно сохранить ссылку
+      // });
+    } catch (err) {
+      console.error('Ошибка при генерации картинки:', err);
+    }
 
     const assistantContent = await generateAssistantAnswer({
       messages: recentMessages,

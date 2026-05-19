@@ -1,9 +1,15 @@
 import GigaChat from 'gigachat';
+import { Agent } from 'node:https';
+
+const httpsAgent = new Agent({
+  rejectUnauthorized: false,
+});
 
 // 1. Создаем клиента ОДИН РАЗ при загрузке модуля (вне функции)
 // Это предотвращает лишние инициализации и потенциальные утечки.
 const gigaClient = new GigaChat({
   credentials: process.env.GIGA_CREDENTIALS,
+  httpsAgent,
 });
 
 export async function generateAssistantAnswer({ messages }) {

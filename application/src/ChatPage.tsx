@@ -31,11 +31,7 @@ function ChatPage() {
   const target = searchParams.get('target');
 
   const [message, setMessage] = useState('');
-  const [chatId, setChatId] = useState<number | null>(() => {
-    const savedChatId = localStorage.getItem('active_chat_id');
-
-    return savedChatId ? Number(savedChatId) : null;
-  });
+  const [chatId, setChatId] = useState<number | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isMessagesLoading, setIsMessagesLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -79,6 +75,12 @@ function ChatPage() {
       block: 'end',
     });
   }, [messages]);
+
+  useEffect(() => {
+      const savedChatId = localStorage.getItem('active_chat_id');
+      if (savedChatId) setChatId(Number(savedChatId))
+  }, []); // Пустой массив зависимостей - выполнится один раз при монтировании
+
 
   useEffect(() => {
     if (!chatId) {

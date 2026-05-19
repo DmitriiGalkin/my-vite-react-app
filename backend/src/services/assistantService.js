@@ -94,6 +94,7 @@ export async function generateAssistantAnswer({ messages }) {
     }
 
     const rawContent = resp.choices[0]?.message?.content;
+    console.log('rawContent', rawContent);
 
     // 5. Проверка, что в ответе вообще есть текст
     if (!rawContent) {

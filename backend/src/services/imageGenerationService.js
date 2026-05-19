@@ -48,10 +48,10 @@ export async function generateProjectImage(project) {
       // },
     });
 
-    console.log(JSON.stringify(imageResponse), 'imageResponse');
+    //console.log(JSON.stringify(imageResponse), 'imageResponse');
 
     const detectedImage = detectImage(imageResponse.choices[0]?.message.content ?? '');
-    console.log(detectedImage, 'detectedImage');
+    //console.log(detectedImage, 'detectedImage');
 
     if (detectedImage && detectedImage.uuid) {
       const image = await giga.getImage(detectedImage.uuid);
@@ -78,7 +78,7 @@ export async function uploadImage(imageBinary) {
       }),
     );
 
-    return name
+    return 'https://storage.yandexcloud.net/quantum-education/' + name
   } catch (err) {
     console.error('Ошибка при отправки картинки на S3:', err);
   }

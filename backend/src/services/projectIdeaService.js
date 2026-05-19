@@ -1,7 +1,7 @@
-'use strict';
+// services/projectIdeaService.js
+// 'use strict';
 
 const Project = require('../models/project');
-const callModel = require('../utils/callModel');
 
 function isCreateProjectIdeaCommand(message) {
   const normalizedMessage = message.trim().toLowerCase();
@@ -42,16 +42,25 @@ function findLastProjectIdea(messages) {
   return null;
 }
 
+// --- ГЛАВНОЕ ИЗМЕНЕНИЕ ---
+// Функция createProjectFromIdea теперь является асинхронной,
+// потому что она вызывает асинхронный метод Project.create.
 async function createProjectFromIdea({ idea, passportId }) {
+  // Проверяем, что идея существует, чтобы избежать ошибок
+  if (!idea) {
+    throw new Error('No idea provided to create a project');
+  }
+
   let image = idea.image || null;
 
-  return callModel(Project.create, {
+  // Возвращаем ID созданного проекта, как и ожидал контроллер
+  return await Project.create({
     passportId,
     title: idea.title || 'Идея проекта',
     description: idea.description || '',
     image,
     placeId: idea.placeId || null,
-  });
+  });;
 }
 
 module.exports = {

@@ -20,7 +20,7 @@ export default function ChatBubble({ role, children }: ChatBubbleProps) {
         border: isUserMessage ? 0 : 1,
         borderColor: 'divider',
         bgcolor: isUserMessage ? '#FFB628' : 'white',
-        color: isUserMessage ? '#111827' : 'text.primary',
+        color: isUserMessage ? 'white' : 'text.primary',
       }}
     >
       {children}

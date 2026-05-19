@@ -1,9 +1,10 @@
-'use strict';
+// services/chatService.js
+// 'use strict';
 
 const Chat = require('../models/chat');
 const ChatMessage = require('../models/chatMessage');
-const callModel = require('../utils/callModel');
 
+// Эта функция остается без изменений, так как она просто форматирует данные.
 function normalizeMessage(row) {
   return {
     id: row.id,
@@ -17,12 +18,14 @@ function normalizeMessage(row) {
   };
 }
 
+// Функция для получения или создания чата
 async function getOrCreateChat({ chatId, passportId, firstMessage }) {
   if (chatId) {
-    const existingChat = await callModel(Chat.findByIdAndPassportId, chatId, passportId);
+    // Прямой вызов модели
+    const existingChat = await Chat.findByIdAndPassportId(chatId, passportId);
 
     if (!existingChat) {
-      const error = new Error('Чат не найден');
+      const error = new Error('Чат не найден или у вас нет доступа');
       error.status = 404;
       throw error;
     }
@@ -30,28 +33,22 @@ async function getOrCreateChat({ chatId, passportId, firstMessage }) {
     return existingChat;
   }
 
-  // const activeChat = await callModel(Chat.findActiveByPassportId, passportId);
-  //
-  // if (activeChat) {
-  //   return activeChat;
-  // }
-
+  // Логика для создания нового чата, если ID не был передан
   const title = firstMessage.length > 80 ? `${firstMessage.slice(0, 80)}...` : firstMessage;
 
-  const createdChatId = await callModel(Chat.create, {
+  const createdChatId = await Chat.create({
     passportId,
     title,
   });
 
-  return {
-    id: createdChatId,
-    passportId,
-    title,
-  };
+  // Находим и возвращаем созданный чат как объект
+  return Chat.findById(createdChatId);
 }
 
+// Функция для создания сообщения от ассистента
 async function createAssistantMessage({ chatId, content, metadata = null }) {
-  const assistantMessageId = await callModel(ChatMessage.create, {
+  // Создаем сообщение в БД
+  const assistantMessageId = await ChatMessage.create({
     chatId,
     passportId: null,
     role: 'assistant',
@@ -60,20 +57,10 @@ async function createAssistantMessage({ chatId, content, metadata = null }) {
     source: 'text',
   });
 
-  return callModel(ChatMessage.findById, assistantMessageId);
+  // Находим и возвращаем полное сообщение (включая ID, createdAt и т.д.)
+  // Это исправляет логическую ошибку, где возвращался только ID.
+  return ChatMessage.findById(assistantMessageId);
 }
-
-// async function createUserMessage({ chatId, passportId, content, source }) {
-//   const userMessageId = await callModel(ChatMessage.create, {
-//     chatId,
-//     passportId,
-//     role: 'user',
-//     content,
-//     source,
-//   });
-//
-//   return userMessageId;
-// }
 
 module.exports = {
   normalizeMessage,

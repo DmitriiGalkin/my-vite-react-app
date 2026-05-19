@@ -147,8 +147,6 @@ exports.usePassport = async (req, res, next) => {
       return res.status(401).json({ error: true, message: 'Токен недействителен или протух' });
     }
 
-    console.log(passport, 'passport');
-
     // Присваиваем паспорт объекту запроса для использования в других обработчиках
     req.passport = passport;
 

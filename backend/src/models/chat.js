@@ -39,6 +39,18 @@ class Chat {
     }
   }
 
+  static async findById(id) {
+    const sql = 'SELECT * FROM chat WHERE id = ? AND deletedAt IS NULL LIMIT 1';
+
+    try {
+      const [rows] = await pool.query(sql, [id]);
+      return rows.length > 0 ? new Chat(rows[0]) : null;
+    } catch (err) {
+      console.error('Chat.findById error:', err);
+      throw err;
+    }
+  }
+
   /**
    * Находит активный чат по ID пользователя.
    * @param {number} passportId - ID пользователя.

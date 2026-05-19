@@ -60,12 +60,12 @@ if (!isDev) {
   };
 
   https.createServer(sslOptions, app).listen(port, () => {
-    console.log(`HTTPS server listening on port ${port}`);
+    console.log(`✅ HTTPS server listening on port ${port}`);
   });
 } else {
 
   http.createServer(app).listen(port, () => {
-    console.log(`HTTP сервер запущен на http://localhost:${port}`);
+    console.log(`✅ HTTP сервер запущен на http://localhost:${port}`);
   });
 }
 

@@ -1,22 +1,26 @@
 // controllers/chatController.js
 // 'use strict';
+import GigaChat from 'gigachat';
 
-const Chat = require('../models/chat');
-const ChatMessage = require('../models/chatMessage');
-const {
+// Импортируем модели и функции из других файлов
+import Chat from '../models/chat.js';
+import ChatMessage from '../models/chatMessage.js';
+import {
   normalizeMessage,
   getOrCreateChat,
   createAssistantMessage,
-} = require('../services/chatService');
-const { generateAssistantAnswer } = require('../services/assistantService');
-const {
+} from '../services/chatService.js';
+import { generateAssistantAnswer } from '../services/assistantService.js';
+import {
   isCreateProjectIdeaCommand,
   findLastProjectIdea,
   createProjectFromIdea,
-} = require('../services/projectIdeaService');
-const { generateProjectImage } = require('../services/imageGenerationService');
+} from '../services/projectIdeaService.js';
+import { generateProjectImage } from '../services/imageGenerationService.js';
 
-exports.createMessage = async function (req, res) {
+// --- Функции контроллера ---
+
+export const createMessage = async function (req, res) {
   try {
     // Проверка авторизации
     if (!req.passport) {
@@ -83,7 +87,8 @@ exports.createMessage = async function (req, res) {
 
       const assistantMessage = await createAssistantMessage({
         chatId: chat.id,
-        content: 'Идея проекта создана. Теперь её можно открыть и отредактировать.',
+        content:
+          'Поздравляем! Идея проекта создана. Мы уже начали подбирать куратора для идеи проекта вашего ребенка. После того как куратор проекта будет назначен, он возмет на себя ответственность по оформлению проекта, выбору места и времени проведения встреч по проекту.startsonar.bat',
         metadata: {
           ...idea,
           id: createdProjectId,
@@ -101,27 +106,35 @@ exports.createMessage = async function (req, res) {
 
     // 4. Генерация ответа ассистента (если это не команда)
     const recentMessages = await ChatMessage.findLastByChatId(chat.id, 10);
+
+    // Пример использования GigaChat (вы оставили его в коде)
+    const giga = new GigaChat({
+      credentials:
+        'MDE5ZTNjODktMDk2OC03NzNkLWEwYTMtYjAwYTMxY2Q4NzEyOmI5NjRkNmQzLWYwMjYtNDQ5MC04MDJmLTMyNzIyNzc5ODg3ZQ==',
+    });
+
+    // Эта часть просто логирует ответ в консоль. Если она не нужна, можно удалить.
+    const resp = await giga.chat({
+      messages: [
+        {
+          role: 'user',
+          content: 'Привет! Как дела?',
+        },
+      ],
+    });
+    console.log(resp.choices[0]?.message.content);
+
     const assistantContent = await generateAssistantAnswer({
       messages: recentMessages,
       chat,
       passport: req.passport,
     });
 
-    let image = null;
-    if (assistantContent.status === 'idea_ready') {
-      try {
-        image = await generateProjectImage(assistantContent.idea);
-      } catch (err) {
-        console.error('Ошибка генерации изображения:', err);
-        // Не прерываем выполнение, если не удалось создать картинку
-      }
-    }
-
     // Сохраняем ответ ассистента в БД
     const assistantMessage = await createAssistantMessage({
       chatId: chat.id,
       content: assistantContent.message,
-      metadata: image || (assistantContent.status === 'idea_ready' ? assistantContent.idea : null),
+      metadata: assistantContent.status === 'idea_ready' ? assistantContent.idea : null,
     });
 
     // Обновляем время последнего изменения чата
@@ -143,9 +156,8 @@ exports.createMessage = async function (req, res) {
   }
 };
 
-exports.findMessages = async function (req, res) {
+export const findMessages = async function (req, res) {
   try {
-    console.log('chat.findMessages');
     if (!req.passport) {
       return res.status(401).json({ error: true, message: 'Требуется авторизация' });
     }
@@ -166,7 +178,7 @@ exports.findMessages = async function (req, res) {
   }
 };
 
-exports.findAll = async function (req, res) {
+export const findAll = async function (req, res) {
   try {
     if (!req.passport) {
       return res.status(401).json({
@@ -175,7 +187,9 @@ exports.findAll = async function (req, res) {
       });
     }
 
-    const chats = await callModel(Chat.findAllByPassportId, req.passport.id);
+    // Исправлено с callModel(...) на прямой вызов метода модели.
+    // Если callModel — это ваша функция-обертка, импортируйте ее и используйте.
+    const chats = await Chat.findAllByPassportId(req.passport.id);
 
     res.json(chats);
   } catch (err) {

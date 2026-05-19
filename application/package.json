@@ -17,6 +17,7 @@
     "@mui/material": "^9.0.1",
     "@tanstack/react-query": "^5.100.9",
     "express": "^5.2.1",
+    "gigachat": "0.0.20",
     "leaflet": "^1.9.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",

@@ -94,8 +94,6 @@ class Project {
       sql += ' WHERE ' + conditions.join(' AND ');
     }
 
-    console.log(sql, values, 'Project.findAll query'); // Логируем для отладки
-
     try {
       const [rows] = await pool.query(sql, values);
       return rows;

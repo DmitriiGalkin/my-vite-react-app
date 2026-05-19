@@ -24,7 +24,7 @@ function ProjectCard({ project }: ProjectCardProps) {
       <CardMedia
         component="img"
         height="90"
-        image={('https://storage.yandexcloud.net/quantum-education/'+ project.image) || `/bg.jpeg`}
+        image={project.image || `/bg.jpeg`}
         alt={project.title || 'Проект'}
         sx={{ objectFit: 'cover' }}
       />

@@ -86,11 +86,6 @@ export default {
           chatId: chat.id,
           content:
             'Поздравляем! Идея проекта создана. Мы уже начали подбирать куратора для идеи проекта вашего ребенка. После того как куратор проекта будет назначен, он возмет на себя ответственность по оформлению проекта, выбору места и времени проведения встреч по проекту.',
-          metadata: {
-            ...idea,
-            id: createdProjectId,
-            passportId: req.passport.id,
-          },
         });
 
         await Chat.touch(chat.id);
@@ -113,7 +108,7 @@ export default {
 
       let image = null;
       let metadata = null;
-      if (assistantContent.status === 'idea_ready') {
+      if (assistantContent.status === 'success') {
         metadata = assistantContent.idea;
 
         const imageBinary = await generateProjectImage(assistantContent.idea);

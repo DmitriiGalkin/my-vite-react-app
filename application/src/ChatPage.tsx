@@ -91,7 +91,7 @@ function ChatPage() {
       setIsMessagesLoading(true);
 
       try {
-        const loadedMessages = await fetchMessages(chatId);
+        const loadedMessages = await fetchMessages(chatId as number);
 
         if (isMounted) {
           setMessages(loadedMessages);

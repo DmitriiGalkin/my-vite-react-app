@@ -18,16 +18,17 @@ const httpsAgent = new Agent({
   rejectUnauthorized: false,
 });
 
+const giga = new GigaChat({
+  timeout: 600,
+  model: 'GigaChat',
+  credentials: process.env.GIGA_CREDENTIALS,
+  httpsAgent: httpsAgent,
+});
+
 export async function generateProjectImage(project) {
   // --- Блок генерации изображения (пример использования GigaChat) ---
   // Этот блок можно вынести в отдельную функцию или сервис, если он нужен постоянно.
   try {
-    const giga = new GigaChat({
-      timeout: 600,
-      model: 'GigaChat',
-      credentials: process.env.GIGA_CREDENTIALS,
-      httpsAgent: httpsAgent,
-    });
 
     const imageResponse = await giga.chat({
       messages: [

@@ -114,10 +114,12 @@ export default {
       let image = null;
       let metadata = null;
       if (assistantContent.status === 'idea_ready') {
+        metadata = assistantContent.idea;
+
         const imageBinary = await generateProjectImage(assistantContent.idea);
         if (imageBinary) image = await uploadImage(imageBinary);
 
-        console.log('imageBinary:', imageBinary);
+        //console.log('imageBinary:', imageBinary);
         metadata = { ...assistantContent.idea, image };
       }
 

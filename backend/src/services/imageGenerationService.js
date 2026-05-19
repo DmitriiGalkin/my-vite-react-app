@@ -1,54 +1,84 @@
-'use strict';
-
-const YANDEX_ART_API_URL =
-  process.env.YANDEX_ART_API_URL || 'https://cloud.yandex.ru/api/ai-studio/v1/yandexart/generate';
+import GigaChat, { detectImage } from 'gigachat';
+import S3 from '../s3.js';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { v4 as uuid } from 'uuid';
+import { Agent } from 'node:https';
 
 function buildProjectImagePrompt(project) {
   return [
-    'Детский образовательный проект.',
+    'Сгенерируй изображение 256px на 256px',
     'Сделай яркую, дружелюбную, современную иллюстрацию без текста на изображении.',
     'Изображение должно подходить для карточки проекта на сайте для родителей и детей.',
-    '',
-    `Название проекта: ${project.title || 'Идея проекта'}`,
+    `Идея проекта: ${project.title || 'Идея проекта'}`,
     `Описание проекта: ${project.description || ''}`,
   ].join('\n');
 }
 
-async function generateProjectImage(project) {
-  if (!process.env.YANDEX_ART_TOKEN) {
-    throw new Error('Не настроен YANDEX_ART_TOKEN');
+const httpsAgent = new Agent({
+  rejectUnauthorized: false,
+});
+
+export async function generateProjectImage(project) {
+  // --- Блок генерации изображения (пример использования GigaChat) ---
+  // Этот блок можно вынести в отдельную функцию или сервис, если он нужен постоянно.
+  try {
+    const giga = new GigaChat({
+      timeout: 600,
+      model: 'GigaChat',
+      credentials: process.env.GIGA_CREDENTIALS,
+      httpsAgent: httpsAgent,
+    });
+
+    const imageResponse = await giga.chat({
+      messages: [
+        {
+          role: 'user',
+          content: buildProjectImagePrompt(project),
+        },
+      ],
+      function_call: 'auto',
+      // function_call: {
+      //   name: 'generateImage', // Название функции генерации
+      //   arguments: {
+      //     prompt: 'Рисуй', // Текст для нейросети
+      //     size: '256x256', // <-- ЗДЕСЬ УКАЗЫВАЕМ РАЗМЕР
+      //     n: 1, // Количество картинок (1 вариант)
+      //   },
+      // },
+    });
+
+    console.log(JSON.stringify(imageResponse), 'imageResponse');
+
+    const detectedImage = detectImage(imageResponse.choices[0]?.message.content ?? '');
+    console.log(detectedImage, 'detectedImage');
+
+    if (detectedImage && detectedImage.uuid) {
+      const image = await giga.getImage(detectedImage.uuid);
+      return image.content;
+    } else {
+      return null;
+    }
+  } catch (err) {
+    console.error('Ошибка при генерации картинки:', err);
   }
-
-  const response = await fetch(YANDEX_ART_API_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.YANDEX_ART_TOKEN}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      prompt: buildProjectImagePrompt(project),
-      style: 'ART',
-      seed: Date.now(),
-    }),
-  });
-
-  console.log('111111')
-  console.log(response, 'response');
-
-  const result = await response.json();
-  console.log(result, 'result');
-
-  if (!response.ok) {
-    throw new Error(result.error || 'YandexART вернул ошибку генерации изображения');
-  }
-
-  if (!result.image_url) {
-    throw new Error(result.error || 'YandexART не вернул image_url');
-  }
-
-  return result.image_url;
 }
 
-module.exports = {
-  generateProjectImage,
-};
+export async function uploadImage(imageBinary) {
+  try {
+    const buffer = Buffer.from(imageBinary, 'binary');
+    const name = uuid() + '.jpg';
+
+    await S3.send(
+      new PutObjectCommand({
+        Bucket: 'quantum-education',
+        Key: name,
+        Body: buffer,
+        ContentType: 'image/jpeg',
+      }),
+    );
+
+    return name
+  } catch (err) {
+    console.error('Ошибка при отправки картинки на S3:', err);
+  }
+}

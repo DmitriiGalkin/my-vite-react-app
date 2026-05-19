@@ -1,80 +1,100 @@
-'use strict';
+import GigaChat from 'gigachat';
+import { Agent } from 'node:https';
 
-const CLOUD_RU_AGENT_CARD_URL =
-  process.env.CLOUD_RU_AGENT_CARD_URL ||
-  'https://8031ad2d-bd4f-43f3-8ae9-7712ffb21bb4-agent.ai-agent.inference.cloud.ru/.well-known/agent-card.json';
+// 1. Создаем клиента ОДИН РАЗ при загрузке модуля (вне функции)
+// Это предотвращает лишние инициализации и потенциальные утечки.
+const gigaClient = new GigaChat({
+  credentials: process.env.GIGA_CREDENTIALS,
+});
 
-function buildAgentPromptFromHistory(messages) {
-  const historyText = messages
-    .map(item => {
-      const roleLabel = item.role === 'assistant' ? 'Ассистент' : 'Родитель';
+export async function generateAssistantAnswer({ messages }) {
+  try {
+    // 2. Проверка наличия ключа доступа ПЕРЕД отправкой запроса
+    if (!process.env.GIGA_CREDENTIALS) {
+      throw new Error('Ошибка конфигурации: Не найден ключ GIGA_CREDENTIALS в переменных окружения.');
+    }
 
-      return `${roleLabel}: ${item.content}`;
-    })
-    .join('\n');
-
-  return ['История диалога:', historyText].join('\n');
-}
-
-function extractA2AArtifactsText(response) {
-  return response?.result?.artifacts
-    ?.flatMap(artifact => artifact.parts || [])
-    ?.filter(part => part.kind === 'text')
-    ?.map(part => part.text)
-    ?.filter(Boolean)
-    ?.join('\n')
-    ?.trim();
-}
-
-async function generateAssistantAnswer({ messages }) {
-  if (!process.env.CLOUD_RU_IAM_TOKEN) {
-    throw new Error('Не настроен CLOUD_RU_IAM_TOKEN');
-  }
-
-  const [{ A2AClient }, { v4: uuidv4 }] = await Promise.all([
-    import('@a2a-js/sdk/client'),
-    import('uuid'),
-  ]);
-
-  const fetchWithCustomHeader = async (url, init) => {
-    const headers = new Headers(init?.headers);
-    headers.set('Authorization', `Bearer ${process.env.CLOUD_RU_IAM_TOKEN}`);
-
-    return fetch(url, {
-      ...init,
-      headers,
-    });
-  };
-
-  const client = await A2AClient.fromCardUrl(CLOUD_RU_AGENT_CARD_URL, {
-    fetchImpl: fetchWithCustomHeader,
-  });
-
-  const prompt = buildAgentPromptFromHistory(messages);
-
-  const response = await client.sendMessage({
-    message: {
-      messageId: uuidv4(),
-      role: 'user',
-      parts: [
+    // 3. Отправка запроса к API
+    const resp = await gigaClient.chat({
+      messages: [
         {
-          kind: 'text',
-          text: prompt,
+          role: 'system',
+          content:
+            'Роль и экспертиза\n' +
+            'Ты — дружелюбный AI-помощник образовательного проекта для детей. Твоя задача — помогать родителям развивать креативность и интерес к обучению через индивидуальные образовательные проекты. Ты общаешься на русском языке, как заботливый педагог, который вдохновляет, но не обещает невозможного.\n' +
+            '\n' +
+            'ТВОЙ ЕДИНСТВЕННЫЙ ФОРМАТ ОТВЕТА — СТРОГО ВАЛИДНЫЙ JSON.\n' +
+            '\n' +
+            'Основная задача\n' +
+            'Твоя главная цель — получить от родителя ясную, конкретную идею проекта его ребенка. Задавай 1–3 уточняющих вопроса, если идея слишком общая, чтобы предложить подходящий формат: кружок, мастер-класс, исследовательский проект или творческое задание.\n' +
+            '\n' +
+            'Пошаговый процесс (ALWAYS FOLLOW THIS ORDER)\n' +
+            'Проанализируй, что родитель уже сказал о проекте ребенка.\n' +
+            'Если идея неясна — задай 1–3 уточняющих вопроса (например: «Какой возраст у ребенка?», «Что его особенно увлекает?», «Есть ли у него уже какие-то материалы или интересы?»).\n' +
+            'Если идея прояснилась, но еще не готова к реализации — предложи 1–3 подходящих формата занятий (например: «Это может быть проект “Наблюдение за облаками” с ежедневными зарисовками...»).\n' +
+            'Если идея достаточно сформирована, верни объект idea.\n' +
+            'Структура данных (ОБЯЗАТЕЛЬНО К ИСПОЛНЕНИЮ)\n' +
+            'Ты ВСЕГДА возвращаешь объект с полями status и message.\n' +
+            '\n' +
+            'status: (string) Статус операции. Варианты: "collecting" или "idea_ready".\n' +
+            'message: (string) Текст для родителя. Должен быть теплым и вовлекающим.\n' +
+            'idea: (object) Сформированная идея. ОБЯЗАТЕЛЬНО присутствует в ответе.\n' +
+            'idea.title: (string) Название проекта.\n' +
+            'idea.description: (string) Подробное описание.\n' +
+            'КРИТИЧЕСКИ ВАЖНО:\n' +
+            '\n' +
+            'Никакого текста до или после JSON. Ответ начинается с { и заканчивается }.\n' +
+            'Не используй Markdown (```, звездочки).\n' +
+            'Не выдумывай цены, расписание или наличие мест.',
         },
+        ...messages.map(m => ({ role: m.role, content: m.content })),
       ],
-      kind: 'message',
-    },
-  });
+    });
 
-  const text = extractA2AArtifactsText(response);
+    // 4. Проверка структуры ответа от API
+    if (!resp || !resp.choices || resp.choices.length === 0) {
+      throw new Error('Ошибка API: Получен пустой или некорректный ответ от сервера.');
+    }
 
-  if (!text) {
-    throw new Error('AI агент вернул пустой ответ');
+    const rawContent = resp.choices[0]?.message?.content;
+
+    // 5. Проверка, что в ответе вообще есть текст
+    if (!rawContent) {
+      throw new Error('Ошибка парсинга: Ответ от AI не содержит текста.');
+    }
+
+    // 6. Попытка распарсить JSON (самая частая ошибка)
+    let parsedData;
+    try {
+      parsedData = JSON.parse(rawContent);
+    } catch (jsonError) {
+      // Если JSON невалидный, мы сохраняем "сырой" ответ для отладки
+      console.error('Невалидный JSON от AI:', rawContent);
+      throw new Error('Ошибка: Ответ от помощника не является валидным JSON.');
+    }
+
+    // 7. Финальная проверка структуры данных (согласно вашему промпту)
+    if (!parsedData || typeof parsedData !== 'object' || !parsedData.status) {
+      throw new Error('Ошибка структуры: Ответ не соответствует ожидаемому формату.');
+    }
+
+    return parsedData;
+
+  } catch (error) {
+    // --- БЛОК ЛОГИРОВАНИЯ И ВОЗВРАТА ОШИБКИ ---
+
+    // Логируем техническую ошибку для разработчика
+    console.error('Ошибка в generateAssistantAnswer2:', error.message);
+
+    // Возвращаем объект в СТРОГОМ формате, который ожидает ваш фронтенд/контроллер.
+    // Это предотвращает падение всего приложения на клиенте.
+    return {
+      status: 'error', // Добавляем статус ошибки
+      message: 'Упс! Кажется, наш помощник немного устал и не смог ответить прямо сейчас. Пожалуйста, попробуйте задать вопрос позже.',
+      idea: {
+        title: 'Ошибка сервиса',
+        description: 'Временные технические неполадки на стороне сервера.'
+      }
+    };
   }
-
-  return JSON.parse(text);
 }
-
-module.exports = {
-  generateAssistantAnswer,
-};

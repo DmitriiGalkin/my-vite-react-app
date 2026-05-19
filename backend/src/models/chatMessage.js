@@ -33,7 +33,7 @@ class ChatMessage {
       data.chatId,
       data.passportId || null,
       data.role,
-      data.content,
+      data.content || 'text',
       data.source || 'text',
       data.metadata ? JSON.stringify(data.metadata) : null,
     ];

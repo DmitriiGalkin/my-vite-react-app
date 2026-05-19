@@ -1,5 +1,3 @@
-// controllers/chatController.js
-import GigaChat, { detectImage } from 'gigachat';
 import Chat from '../models/chat.js';
 import ChatMessage from '../models/chatMessage.js';
 import {
@@ -8,18 +6,14 @@ import {
   createAssistantMessage,
 } from '../services/chatService.js';
 import { generateAssistantAnswer } from '../services/assistantService.js';
+
 import {
   isCreateProjectIdeaCommand,
   findLastProjectIdea,
   createProjectFromIdea,
 } from '../services/projectIdeaService.js';
 import { generateProjectImage } from '../services/imageGenerationService.js';
-import * as fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import S3 from '../s3.js';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
-import { v4 as uuid } from 'uuid';
+import { uploadImage } from '../services/imageGenerationService.js';
 
 // --- Функции контроллера ---
 
@@ -110,54 +104,27 @@ export default {
       // 4. Генерация ответа ассистента
       const recentMessages = await ChatMessage.findLastByChatId(chat.id, 10);
 
-      // --- Блок генерации изображения (пример использования GigaChat) ---
-      // Этот блок можно вынести в отдельную функцию или сервис, если он нужен постоянно.
-      try {
-        const giga = new GigaChat({
-          credentials:
-            'MDE5ZTNjODktMDk2OC03NzNkLWEwYTMtYjAwYTMxY2Q4NzEyOmI5NjRkNmQzLWYwMjYtNDQ5MC04MDJmLTMyNzIyNzc5ODg3ZQ==',
-        });
-
-        const imageResponse = await giga.chat({
-          messages: [
-            {
-              role: 'user',
-              content: 'Сгенерируй изображение котика 50x50 px',
-            },
-          ],
-          function_call: 'auto',
-        });
-
-        const detectedImage = detectImage(imageResponse.choices[0]?.message.content ?? '');
-        if (detectedImage && detectedImage.uuid) {
-          const image = await giga.getImage(detectedImage.uuid);
-          const buffer = Buffer.from(image.content, 'binary');
-
-          await S3.send(
-            new PutObjectCommand({
-              Bucket: 'quantum-education',
-              Key: uuid() + '.jpg',
-              Body: buffer,
-              ContentType: 'image/jpeg',
-            }),
-          );
-        }
-      } catch (err) {
-        console.error('Ошибка при генерации картинки:', err);
-      }
-
-      // --- Конец блока генерации изображения ---
-
       const assistantContent = await generateAssistantAnswer({
         messages: recentMessages,
         chat,
         passport: req.passport,
       });
+      console.log('assistantContent:', assistantContent);
+
+      let image = null;
+      let metadata = null;
+      if (assistantContent.status === 'idea_ready') {
+        const imageBinary = await generateProjectImage(assistantContent.idea);
+        if (imageBinary) image = await uploadImage(imageBinary);
+
+        console.log('imageBinary:', imageBinary);
+        metadata = { ...assistantContent.idea, image };
+      }
 
       const assistantMessage = await createAssistantMessage({
         chatId: chat.id,
         content: assistantContent.message,
-        metadata: assistantContent.status === 'idea_ready' ? assistantContent.idea : null,
+        metadata,
       });
 
       await Chat.touch(chat.id);

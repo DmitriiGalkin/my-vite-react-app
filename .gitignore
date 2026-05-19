@@ -51,3 +51,6 @@ coverage/
 *.crt
 *.key
 *.ppk
+
+#sonar
+.scannerwork/

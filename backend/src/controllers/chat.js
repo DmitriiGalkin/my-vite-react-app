@@ -104,24 +104,23 @@ export default {
         chat,
         passport: req.passport,
       });
-      console.log('assistantContent:', assistantContent);
+      //console.log('assistantContent:', assistantContent);
 
-      let image = null;
+      //let image = null;
       let metadata = null;
-      if (assistantContent.status === 'success') {
-        metadata = assistantContent.idea;
-
-        // const imageBinary = await generateProjectImage(assistantContent.idea);
-        // if (imageBinary) image = await uploadImage(imageBinary);
-        //
-        // //console.log('imageBinary:', imageBinary);
-        // metadata = { ...assistantContent.idea, image };
-      }
+      // if (assistantContent.status === 'success') {
+      //   metadata = assistantContent.idea;
+      //
+      //   // const imageBinary = await generateProjectImage(assistantContent.idea);
+      //   // if (imageBinary) image = await uploadImage(imageBinary);
+      //   //
+      //   // //console.log('imageBinary:', imageBinary);
+      //   // metadata = { ...assistantContent.idea, image };
+      // }
 
       const assistantMessage = await createAssistantMessage({
         chatId: chat.id,
-        content: assistantContent.message,
-        metadata,
+        ...assistantContent,
       });
 
       await Chat.touch(chat.id);

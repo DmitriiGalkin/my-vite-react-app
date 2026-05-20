@@ -1,12 +1,11 @@
 import GigaChat from 'gigachat';
 import { Agent } from 'node:https';
+import { convertToProjectObject } from './helper.js';
 
 const httpsAgent = new Agent({
   rejectUnauthorized: false,
 });
 
-// 1. Создаем клиента ОДИН РАЗ при загрузке модуля (вне функции)
-// Это предотвращает лишние инициализации и потенциальные утечки.
 const gigaClient = new GigaChat({
   credentials: process.env.GIGA_CREDENTIALS,
   httpsAgent,
@@ -18,7 +17,7 @@ const SYSTEM_PROMPT = `Роль и экспертиза
 Основная задача
 Получить от родителя ясную, конкретную идею проекта его ребенка. Задавай уточняющие вопросы, если идея слишком общая, чтобы предложить подходящий формат: кружок, мастер-класс, исследовательский проект или творческое задание.
 
-Правила общения:
+Правила форматирования ответа
       - Никогда не повторяй слова пользователя.
       - Не используй фразы вроде "Вы сказали", "Вы написали".
       - Говори от своего лица: "Предлагаю", "Можно рассмотреть", "Я рекомендую".
@@ -26,32 +25,19 @@ const SYSTEM_PROMPT = `Роль и экспертиза
       - Ответ должен быть только по существу задачи.
       - Ответ должен начинаться с заглавной буквы
       
-Правила использования инструментов
-Ты работаешь с инструментом generate_project_idea.
-1. Когда использовать инструмент:
-Используй инструмент, если:
-- Идея проекта ДОСТАТОЧНО СФОРМИРОВАНА.
-2. Когда отвечать текстом (content):
-Если пользователь задал вопрос, на который можно ответить сразу.
-3. Как отвечать после инструмента:
-Получив данные от generate_project_idea, ты обязан составить дружелюбный текстовый ответ для пользователя. Не выводи JSON-структуру. Используй поля title и description из ответа инструмента для создания красивого сообщения.
-      
 Пошаговый процесс (ALWAYS FOLLOW THIS ORDER)
 1. Проанализируй, что родитель уже сказал о проекте ребенка.
 2. Если идея НЕСФОРМИРОВАНА (неясна или слишком общая):
-   - Задай 1–5 уточняющих вопросов (например: «Что его особенно увлекает?», «Какой возраст у ребенка?», «Есть ли у него уже какие-то материалы или интересы?»).
-   - **ОБЯЗАТЕЛЬНО:** Заверши свой ответ открытым вопросом, чтобы продолжить диалог и собрать больше информации.
-   - Верни статус: collecting.
+   - Задай 1–3 уточняющих вопросов (например: «Что его особенно увлекает?», «Какой возраст у ребенка?», «Есть ли у него уже какие-то материалы или интересы?»).
 3. Если идея ПРОЯСНИЛАСЬ, но еще не готова к реализации:
    - Предложи 1–3 подходящих формата занятий (например: «Это может быть проект “Наблюдение за облаками” с ежедневными зарисовками...»).
-   - **ОБЯЗАТЕЛЬНО:** Заверши предложение вопросом о предпочтениях или готовности к старту (например: «Как вам такой вариант?», «С чего бы вы хотели начать?»).
-4. Если идея ДОСТАТОЧНО СФОРМИРОВАНА:
-   - Сформулируй краткое описание идеи из двух предложений.
-   - Верни статус: success.
-
-ВАЖНОЕ ПРАВИЛО:
-Пока статус collecting, КАЖДОЕ твое message должно заканчиваться вопросом. Это необходимо для продолжения сбора информации. Не предлагай финальные решения, пока идея не станет конкретной.`;
-
+4. Если идея сформирована, твой ответ должен состоять из ДВУХ частей:
+Первая: Дружелюбное и вдохновляющее описание проекта для родителя.
+Вторая: Структурированный ВАЛИДНЫЙ объект JSON с ключами title, description, steps. Этот блок должен быть СТРОГО в конце и отделен от основного текста. Никаких символов после этого JSON.
+Пример:
+У меня есть идея! { "title": "Дом на Марсе", "description": "Создание макета базы", "steps": ["Шаг 1", "Шаг 2"] }
+ВНИМАНИЕ: JSON должен быть строго последним элементом в твоем ответе. После закрывающей скобки } не должно быть никакого текста, примечаний или пояснений.
+`;
 
 //Reasoning and Acting
 export async function generateAssistantAnswer({ messages }) {
@@ -64,32 +50,32 @@ export async function generateAssistantAnswer({ messages }) {
     }
 
     // Определяем схему для самой идеи
-    const ideaSchema = {
-      type: 'object',
-      properties: {
-        title: { type: 'string' },
-        description: { type: 'string' },
-      },
-      required: ['title', 'description'],
-    };
-
-    // Определяем схему для финального ответа
-    const responseSchema = {
-      type: 'object',
-      properties: {
-        status: { type: 'string', enum: ['success', 'error', 'collecting'] },
-        idea: ideaSchema,
-      },
-      required: ['status', 'idea', 'message'],
-    };
+    // const ideaSchema = {
+    //   type: 'object',
+    //   properties: {
+    //     title: { type: 'string' },
+    //     description: { type: 'string' },
+    //   },
+    //   required: ['title', 'description'],
+    // };
+    //
+    // // Определяем схему для финального ответа
+    // const responseSchema = {
+    //   type: 'object',
+    //   properties: {
+    //     status: { type: 'string', enum: ['success', 'error', 'collecting'] },
+    //     idea: ideaSchema,
+    //   },
+    //   required: ['status', 'idea', 'message'],
+    // };
 
     // Название функции должно быть в стиле snake_case или camelCase
-    const generateIdeaTool = {
-      name: 'generate_project_idea',
-      description:
-        'Генерирует идею образовательного проекта для ребенка на основе запроса родителя.',
-      parameters: responseSchema, // Схема входных параметров (в данном случае это и есть наш ответ)
-    };
+    // const generateIdeaTool = {
+    //   name: 'generate_project_idea',
+    //   description:
+    //     'Генерирует идею образовательного проекта для ребенка на основе запроса родителя.',
+    //   parameters: responseSchema, // Схема входных параметров (в данном случае это и есть наш ответ)
+    // };
 
     const payload = {
       messages: [
@@ -99,8 +85,8 @@ export async function generateAssistantAnswer({ messages }) {
         },
         ...messages.map(m => ({ role: m.role, content: m.content })),
       ],
-      functions: [generateIdeaTool],
-      function_call: { name: 'generate_project_idea' },
+      //functions: 'auto',
+      //function_call: { name: 'generate_project_idea' },
     };
 
     // 3. Отправка запроса к API
@@ -124,20 +110,39 @@ export async function generateAssistantAnswer({ messages }) {
     // });
 
     // console.log(payload, 'payload');
-console.log(JSON.parse(JSON.stringify(resp.choices[0]?.message)), 'Ответ');
+
     // 4. Проверка структуры ответа от API
     if (!resp || !resp.choices || resp.choices.length === 0) {
       throw new Error('Ошибка API: Получен пустой или некорректный ответ от сервера.');
     }
 
-    const parsedData = resp.choices[0]?.message?.function_call?.arguments;
+    const parsedData = resp.choices[0]?.message.content;
+    console.log('Content: ', parsedData);
 
-    // 7. Финальная проверка структуры данных (согласно вашему промпту)
-    if (!parsedData || typeof parsedData !== 'object' || !parsedData.status) {
-      throw new Error('Ошибка структуры: Ответ не соответствует ожидаемому формату.');
-    }
+    // const parsedData = resp.choices[0]?.message?.function_call?.arguments;
 
-    return parsedData;
+    // 1. Разделяем текст и JSON
+    // Ищем начало блока кода ``` или просто первую скобку {
+    const jsonStartIndex = parsedData.indexOf('{');
+    console.log('jsonStartIndex: ', jsonStartIndex);
+
+    const userMessage =
+      jsonStartIndex !== -1 ? parsedData.slice(0, jsonStartIndex).trim() : parsedData; // Текст для пользователя
+    const jsonString = jsonStartIndex !== -1 ? parsedData.slice(jsonStartIndex).trim() : null; // Строка JSON
+
+    // 2. Парсим JSON
+    //const structuredData = JSON.parse(jsonString);
+
+    console.log(userMessage, 'userMessage');
+    console.log(jsonString, 'jsonString');
+
+    const metadata = jsonString ? JSON.stringify(convertToProjectObject(jsonString)) : null;
+    console.log(metadata, 'metadata');
+
+    return {
+      content: userMessage,
+      metadata,
+    };
   } catch (error) {
     // --- БЛОК ЛОГИРОВАНИЯ И ВОЗВРАТА ОШИБКИ ---
 
@@ -148,11 +153,12 @@ console.log(JSON.parse(JSON.stringify(resp.choices[0]?.message)), 'Ответ');
     // Это предотвращает падение всего приложения на клиенте.
     return {
       status: 'error', // Добавляем статус ошибки
-      message: 'Упс! Кажется, наш помощник немного устал и не смог ответить прямо сейчас. Пожалуйста, попробуйте задать вопрос позже.',
+      message:
+        'Упс! Кажется, наш помощник немного устал и не смог ответить прямо сейчас. Пожалуйста, попробуйте задать вопрос позже.',
       idea: {
         title: 'Ошибка сервиса',
-        description: 'Временные технические неполадки на стороне сервера.'
-      }
+        description: 'Временные технические неполадки на стороне сервера.',
+      },
     };
   }
 }

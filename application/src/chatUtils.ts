@@ -31,6 +31,9 @@ export function getProjectFromMetadata(metadata: unknown): Project | null {
 
   if (typeof metadata === 'string') {
     try {
+      console.log(metadata, 'metadata metadata');
+
+      console.log(JSON.parse(metadata), 'getProjectFromMetadata metadata');
       return JSON.parse(metadata) as Project;
     } catch {
       return null;

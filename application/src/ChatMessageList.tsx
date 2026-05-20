@@ -1,8 +1,10 @@
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Button } from '@mui/material';
 import ProjectCard from './ProjectCard';
 import Message from './Message';
 import type { ChatMessage } from './requests';
 import { getProjectFromMetadata } from './chatUtils';
+import ReactMarkdown from 'markdown-to-jsx';
+
 
 type ChatMessageListProps = {
   messages: ChatMessage[];
@@ -25,7 +27,7 @@ function ChatMessageList({ messages, isSending, onCreateProjectIdea }: ChatMessa
             }}
           >
             <Message role={chatMessage.role}>
-              <Typography>{chatMessage.content}</Typography>
+              <ReactMarkdown>{chatMessage.content}</ReactMarkdown>
             </Message>
 
             {project && (

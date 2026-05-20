@@ -35,7 +35,7 @@ class ChatMessage {
       data.role,
       data.content || 'text',
       data.source || 'text',
-      data.metadata ? JSON.stringify(data.metadata) : null,
+      data.metadata || null,
     ];
 
     try {

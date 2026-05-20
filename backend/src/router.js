@@ -73,6 +73,8 @@ router.get('/chats', passportController.usePassport, chat.findAll);
 router.get('/chat/:id/messages', passportController.usePassport, chat.findMessages);
 router.post('/chat', passportController.usePassport, chat.createMessage);
 
+router.post('/message/:id/generateImage', passportController.usePassport, chat.generateImage);
+
 /**
  * Места
  */

@@ -111,3 +111,13 @@ export async function deleteVisit(visitId: number) {
     method: 'DELETE',
   });
 }
+
+export async function generateImage(messageId: number) {
+  return apiFetch(`/message/${messageId}/generateImage`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: undefined,
+  });
+}

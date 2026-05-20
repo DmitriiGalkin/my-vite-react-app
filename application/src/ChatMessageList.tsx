@@ -1,18 +1,35 @@
-import { Box, Button } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
 import ProjectCard from './ProjectCard';
 import Message from './Message';
-import type { ChatMessage } from './requests';
+import { type ChatMessage, generateImage } from './requests';
 import { getProjectFromMetadata } from './chatUtils';
 import ReactMarkdown from 'markdown-to-jsx';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 
 type ChatMessageListProps = {
+  chatId: number;
   messages: ChatMessage[];
   isSending: boolean;
   onCreateProjectIdea: () => void;
 };
 
-function ChatMessageList({ messages, isSending, onCreateProjectIdea }: ChatMessageListProps) {
+function ChatMessageList({
+  chatId,
+  messages,
+  isSending,
+  onCreateProjectIdea,
+}: ChatMessageListProps) {
+  const queryClient = useQueryClient();
+
+  const generateImageMutation = useMutation({
+    mutationFn: generateImage,
+    onSuccess: a => {
+      console.log(a, 'a');
+      queryClient.invalidateQueries({ queryKey: ['chat', chatId] });
+    },
+  });
+
   return (
     <>
       {messages.map((chatMessage, index) => {
@@ -27,12 +44,18 @@ function ChatMessageList({ messages, isSending, onCreateProjectIdea }: ChatMessa
             }}
           >
             <Message role={chatMessage.role}>
-              <ReactMarkdown>{chatMessage.content}</ReactMarkdown>
+              <Typography>
+                <ReactMarkdown>{chatMessage.content}</ReactMarkdown>
+              </Typography>
             </Message>
 
             {project && (
-              <Box sx={{ mt: 2 }}>
-                <ProjectCard project={project} />
+              <Box sx={{ mt: 2, alignItems: 'center' }}>
+                <ProjectCard
+                  project={project}
+                  isGeneratingImage={generateImageMutation.isPending}
+                  generateImageHandler={() => generateImageMutation.mutate(chatMessage.id)}
+                />
 
                 {isLastMessage && !project.id && (
                   <Button
@@ -43,13 +66,10 @@ function ChatMessageList({ messages, isSending, onCreateProjectIdea }: ChatMessa
 
                       // --- СТИЛИ СООБЩЕНИЯ ПОЛЬЗОВАТЕЛЯ ---
                       alignSelf: 'flex-end', // Прижимаем к правому краю (как у пользователя)
-                      maxWidth: '80%',
-                      borderRadius: '16px 16px 0 16px', // Скругление для "пузыря" справа
+                      borderRadius: 16, // Скругление для "пузыря" справа
                       bgcolor: '#FFB628', // Оранжевый цвет пользователя
                       color: 'white', // Белый текст
 
-                      // --- СТИЛИ ДЛЯ "БЛЕКЛОГО" ВАРИАНТА ---
-                      opacity: 0.6, // Делаем кнопку полупрозрачной (блеклой)
                       boxShadow: 'none', // Убираем тень для чистоты
 
                       // Показываем, что на кнопку можно нажать

@@ -20,6 +20,37 @@ import { uploadImage } from '../services/imageGenerationService.js';
 // Все функции объявлены как const и собраны в объект в конце файла
 
 export default {
+  generateImage: async (req, res) => {
+    try {
+      // Проверка авторизации
+      if (!req.passport) {
+        return res.status(401).json({
+          error: true,
+          message: 'Требуется авторизация',
+        });
+      }
+
+      const messageId = req.params.id;
+
+      const message = await ChatMessage.findById(messageId);
+      const metadata = JSON.parse(message.metadata);
+
+      const imageBinary = await generateProjectImage(metadata);
+      const image = await uploadImage(imageBinary);
+
+      await ChatMessage.update(messageId, { metadata: { ...metadata, image } });
+
+      return res.json({
+        image,
+      });
+    } catch (err) {
+      console.error('chat.generateImage error:', err);
+      res.status(err.status || 500).json({
+        error: true,
+        message: err.message || 'Не удалось сгенерировать изображение для сообщения',
+      });
+    }
+  },
   createMessage: async (req, res) => {
     try {
       // Проверка авторизации
@@ -105,18 +136,6 @@ export default {
         passport: req.passport,
       });
       //console.log('assistantContent:', assistantContent);
-
-      //let image = null;
-      let metadata = null;
-      // if (assistantContent.status === 'success') {
-      //   metadata = assistantContent.idea;
-      //
-      //   // const imageBinary = await generateProjectImage(assistantContent.idea);
-      //   // if (imageBinary) image = await uploadImage(imageBinary);
-      //   //
-      //   // //console.log('imageBinary:', imageBinary);
-      //   // metadata = { ...assistantContent.idea, image };
-      // }
 
       const assistantMessage = await createAssistantMessage({
         chatId: chat.id,

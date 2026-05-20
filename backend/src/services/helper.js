@@ -13,6 +13,8 @@ export const convertToProjectObject = (jsonString) => {
   }
 
   cleanString = cleanString.replace(/\n/g, '');
+  cleanString = cleanString.replace(/`/g, '');
+
 
   console.log(cleanString, 'cleanString');
 

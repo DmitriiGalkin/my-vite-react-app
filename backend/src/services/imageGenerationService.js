@@ -29,8 +29,7 @@ export async function generateProjectImage(project) {
   // --- Блок генерации изображения (пример использования GigaChat) ---
   // Этот блок можно вынести в отдельную функцию или сервис, если он нужен постоянно.
   try {
-
-    const imageResponse = await giga.chat({
+    const payload = {
       messages: [
         {
           role: 'user',
@@ -38,15 +37,9 @@ export async function generateProjectImage(project) {
         },
       ],
       function_call: 'auto',
-      // function_call: {
-      //   name: 'generateImage', // Название функции генерации
-      //   arguments: {
-      //     prompt: 'Рисуй', // Текст для нейросети
-      //     size: '256x256', // <-- ЗДЕСЬ УКАЗЫВАЕМ РАЗМЕР
-      //     n: 1, // Количество картинок (1 вариант)
-      //   },
-      // },
-    });
+    };
+    console.log(payload,'payload');
+    const imageResponse = await giga.chat(payload);
 
     //console.log(JSON.stringify(imageResponse), 'imageResponse');
 

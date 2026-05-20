@@ -16,6 +16,7 @@ import ChatWelcome from './ChatWelcome';
 import ChatMessageList from './ChatMessageList';
 import type { SpeechRecognition } from './chatUtils';
 import ChatComposer from './ChatComposer';
+import { useQuery } from '@tanstack/react-query';
 
 type SpeechRecognitionConstructor = new () => SpeechRecognition;
 
@@ -32,12 +33,23 @@ function ChatPage() {
 
   const [message, setMessage] = useState('');
   const [chatId, setChatId] = useState<number | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isMessagesLoading, setIsMessagesLoading] = useState(false);
+  const [sendMessages, setSendMessages] = useState<ChatMessage[]>([]);
   const [isListening, setIsListening] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+
+
+  const { data: serverMessages = [], isLoading: isMessagesLoading } = useQuery({
+    // Уникальный ключ запроса. Если chatId null, запрос не выполнится.
+    queryKey: ['chat', chatId],
+    queryFn: () => fetchMessages(chatId!), // Вызываем функцию API
+    enabled: !!chatId, // Запрос активен только если chatId существует (аналог if (!chatId) return)
+    // staleTime: 1000 * 60 * 5, // Необязательно: данные считаются "свежими" 5 минут (не будет рефетча)
+  });
+
+  const messages = [...serverMessages, ...sendMessages];
 
   async function sendChatMessage(text: string) {
     const trimmedMessage = text.trim();
@@ -56,7 +68,7 @@ function ChatPage() {
 
       setChatId(response.chatId);
       localStorage.setItem('active_chat_id', String(response.chatId));
-      setMessages(currentMessages => [...currentMessages, ...response.messages]);
+      setSendMessages(currentMessages => [...currentMessages, ...response.messages]);
 
       if (trimmedMessage === message.trim()) {
         setMessage('');
@@ -68,6 +80,7 @@ function ChatPage() {
       setIsSending(false);
     }
   }
+
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -81,38 +94,6 @@ function ChatPage() {
       if (savedChatId) setChatId(Number(savedChatId))
   }, []); // Пустой массив зависимостей - выполнится один раз при монтировании
 
-
-  useEffect(() => {
-    if (!chatId) {
-      return;
-    }
-
-    let isMounted = true;
-
-    async function loadMessages() {
-      setIsMessagesLoading(true);
-
-      try {
-        const loadedMessages = await fetchMessages(chatId as number);
-
-        if (isMounted) {
-          setMessages(loadedMessages);
-        }
-      } catch (error) {
-        console.log(error, 'error');
-      } finally {
-        if (isMounted) {
-          setIsMessagesLoading(false);
-        }
-      }
-    }
-
-    loadMessages();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [chatId]);
 
   const handleMicrophoneClick = () => {
     if (isListening) {
@@ -203,7 +184,7 @@ function ChatPage() {
         }}
       >
         <Stack spacing={2} sx={{ flexGrow: 1 }}>
-          {(target === 'idea') && <ChatWelcome />}
+          {target === 'idea' && <ChatWelcome />}
 
           {isMessagesLoading && (
             <Typography color="text.secondary" sx={{ alignSelf: 'center' }}>
@@ -212,16 +193,16 @@ function ChatPage() {
           )}
 
           <ChatMessageList
+            chatId={chatId}
             messages={messages}
             isSending={isSending}
             onCreateProjectIdea={() => {
               sendChatMessage('Создать идею проекта');
             }}
           />
-          <Box ref={messagesEndRef} />
         </Stack>
       </Container>
-
+      <Box ref={messagesEndRef} />
       <ChatComposer
         message={message}
         isListening={isListening}

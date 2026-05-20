@@ -93,6 +93,61 @@ class ChatMessage {
     // Реверс нужен, чтобы вернуть сообщения в хронологическом порядке (старый -> новый)
     return rows.reverse().map(row => new ChatMessage(row));
   }
+
+  /**
+   * Обновляет существующее сообщение в базе данных.
+   * @param {number} id - ID сообщения для обновления.
+   * @param {Object} updateData - Объект с полями для обновления (content, metadata).
+   * @returns {Promise<number>} - Количество затронутых строк (1 при успехе).
+   */
+  static async update(id, updateData) {
+    // Проверяем, что есть что обновлять
+    if (!updateData || Object.keys(updateData).length === 0) {
+      throw new Error('Нет данных для обновления');
+    }
+
+    const sqlParts = [];
+    const values = [];
+
+    // Динамически строим SET часть запроса
+    if (updateData.content !== undefined) {
+      sqlParts.push('content = ?');
+      values.push(updateData.content);
+    }
+
+    if (updateData.metadata !== undefined) {
+      sqlParts.push('metadata = ?');
+      values.push(JSON.stringify(updateData.metadata));
+    }
+
+    // Добавляем ID в конец массива значений для WHERE
+    values.push(id);
+
+    // Если ничего не добавили для обновления, выходим
+    if (sqlParts.length === 0) {
+      throw new Error('Нет валидных полей для обновления');
+    }
+
+    const sql = `
+      UPDATE chatMessage
+      SET ${sqlParts.join(', ')}
+      WHERE id = ?
+    `;
+
+    try {
+      const [result] = await pool.query(sql, values);
+
+      // Если ни одна строка не была изменена, возможно, сообщение не найдено
+      if (result.affectedRows === 0) {
+        throw new Error('Сообщение не найдено или данные не изменены');
+      }
+
+      return result.affectedRows;
+    } catch (err) {
+      console.error('ChatMessage.update error:', err);
+      throw err; // Выбрасываем ошибку для обработки в контроллере
+    }
+  }
 }
 
 export default ChatMessage;

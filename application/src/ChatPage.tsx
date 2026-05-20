@@ -193,7 +193,7 @@ function ChatPage() {
           )}
 
           <ChatMessageList
-            chatId={chatId}
+            chatId={chatId as number}
             messages={messages}
             isSending={isSending}
             onCreateProjectIdea={() => {

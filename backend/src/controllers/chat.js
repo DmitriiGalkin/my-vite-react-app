@@ -111,11 +111,11 @@ export default {
       if (assistantContent.status === 'success') {
         metadata = assistantContent.idea;
 
-        const imageBinary = await generateProjectImage(assistantContent.idea);
-        if (imageBinary) image = await uploadImage(imageBinary);
-
-        //console.log('imageBinary:', imageBinary);
-        metadata = { ...assistantContent.idea, image };
+        // const imageBinary = await generateProjectImage(assistantContent.idea);
+        // if (imageBinary) image = await uploadImage(imageBinary);
+        //
+        // //console.log('imageBinary:', imageBinary);
+        // metadata = { ...assistantContent.idea, image };
       }
 
       const assistantMessage = await createAssistantMessage({

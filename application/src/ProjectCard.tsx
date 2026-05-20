@@ -61,17 +61,19 @@ function ProjectCard({ project, generateImageHandler, isGeneratingImage }: Proje
               Генерирую...
             </>
           )}
-          <IconButton
-            sx={{ backgroundColor: 'rgba(255, 255, 255, 0.8)' }}
-            aria-label="Сгенерировать обложку"
-            // Здесь будет обработчик клика на генерацию
-            onClick={e => {
-              e.stopPropagation();
-              generateImageHandler();
-            }}
-          >
-            <AutoAwesome fontSize="large" />
-          </IconButton>
+          {generateImageHandler && (
+            <IconButton
+              sx={{ backgroundColor: 'rgba(255, 255, 255, 0.8)' }}
+              aria-label="Сгенерировать обложку"
+              // Здесь будет обработчик клика на генерацию
+              onClick={e => {
+                e.stopPropagation();
+                generateImageHandler();
+              }}
+            >
+              <AutoAwesome fontSize="large" />
+            </IconButton>
+          )}
         </Box>
       </Box>
 
